@@ -1,0 +1,256 @@
+{
+  "status": "Measured",
+  "scope": "Lexical schema retrieval only; no LLM generation was involved.",
+  "examples": 15,
+  "recall_at_1": 0.8,
+  "recall_at_3": 0.9666666666666667,
+  "recall_at_5": 0.9666666666666667,
+  "records": [
+    {
+      "id": "C01",
+      "retrieved": [
+        "Customer",
+        "Invoice",
+        "Album",
+        "Artist",
+        "Employee"
+      ],
+      "required": [
+        "Customer"
+      ],
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0
+    },
+    {
+      "id": "C02",
+      "retrieved": [
+        "Artist",
+        "Album",
+        "Customer",
+        "Employee",
+        "Genre"
+      ],
+      "required": [
+        "Artist"
+      ],
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0
+    },
+    {
+      "id": "C03",
+      "retrieved": [
+        "Track",
+        "PlaylistTrack",
+        "InvoiceLine",
+        "Album",
+        "Artist"
+      ],
+      "required": [
+        "Track"
+      ],
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0
+    },
+    {
+      "id": "C04",
+      "retrieved": [
+        "Invoice",
+        "Customer",
+        "InvoiceLine",
+        "Album",
+        "Artist"
+      ],
+      "required": [
+        "Customer",
+        "Invoice"
+      ],
+      "recall_at_1": 0.5,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0
+    },
+    {
+      "id": "C05",
+      "retrieved": [
+        "Invoice",
+        "InvoiceLine",
+        "Customer",
+        "Employee",
+        "Album"
+      ],
+      "required": [
+        "Invoice"
+      ],
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0
+    },
+    {
+      "id": "C06",
+      "retrieved": [
+        "Genre",
+        "Track",
+        "PlaylistTrack",
+        "InvoiceLine",
+        "Album"
+      ],
+      "required": [
+        "Genre",
+        "Track"
+      ],
+      "recall_at_1": 0.5,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0
+    },
+    {
+      "id": "C07",
+      "retrieved": [
+        "Customer",
+        "Employee",
+        "Invoice",
+        "Album",
+        "Artist"
+      ],
+      "required": [
+        "Employee",
+        "Customer"
+      ],
+      "recall_at_1": 0.5,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0
+    },
+    {
+      "id": "C08",
+      "retrieved": [
+        "Track",
+        "PlaylistTrack",
+        "InvoiceLine",
+        "Album",
+        "Artist"
+      ],
+      "required": [
+        "Track"
+      ],
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0
+    },
+    {
+      "id": "C09",
+      "retrieved": [
+        "Invoice",
+        "InvoiceLine",
+        "Customer",
+        "Employee",
+        "Album"
+      ],
+      "required": [
+        "Invoice"
+      ],
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0
+    },
+    {
+      "id": "C10",
+      "retrieved": [
+        "Genre",
+        "Track",
+        "PlaylistTrack",
+        "InvoiceLine",
+        "Album"
+      ],
+      "required": [
+        "Genre",
+        "Track"
+      ],
+      "recall_at_1": 0.5,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0
+    },
+    {
+      "id": "C11",
+      "retrieved": [
+        "Invoice",
+        "InvoiceLine",
+        "Album",
+        "Artist",
+        "Customer"
+      ],
+      "required": [
+        "Invoice"
+      ],
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0
+    },
+    {
+      "id": "C12",
+      "retrieved": [
+        "Album",
+        "Artist",
+        "Track",
+        "Customer",
+        "Employee"
+      ],
+      "required": [
+        "Artist",
+        "Album"
+      ],
+      "recall_at_1": 0.5,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0
+    },
+    {
+      "id": "C13",
+      "retrieved": [
+        "Track",
+        "PlaylistTrack",
+        "InvoiceLine",
+        "Album",
+        "Artist"
+      ],
+      "required": [
+        "MediaType",
+        "Track"
+      ],
+      "recall_at_1": 0.5,
+      "recall_at_3": 0.5,
+      "recall_at_5": 0.5
+    },
+    {
+      "id": "C14",
+      "retrieved": [
+        "Track",
+        "PlaylistTrack",
+        "InvoiceLine",
+        "Album",
+        "Artist"
+      ],
+      "required": [
+        "Track"
+      ],
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0
+    },
+    {
+      "id": "C15",
+      "retrieved": [
+        "Playlist",
+        "PlaylistTrack",
+        "Album",
+        "Artist",
+        "Customer"
+      ],
+      "required": [
+        "Playlist"
+      ],
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0
+    }
+  ]
+}

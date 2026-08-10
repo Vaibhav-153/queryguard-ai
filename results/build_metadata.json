@@ -1,0 +1,19 @@
+{
+  "date": "2026-08-10",
+  "status": "partially_verified",
+  "python_build_runtime": "3.13.5",
+  "tests": {
+    "passed": 13,
+    "skipped_modules": 3,
+    "skip_reason": "sqlglot unavailable from build runtime package index"
+  },
+  "lexical_retrieval": {
+    "examples": 15,
+    "recall_at_1": 0.8,
+    "recall_at_3": 0.9666666666666667,
+    "recall_at_5": 0.9666666666666667
+  },
+  "ollama_evaluation": "not_tested",
+  "semantic_retrieval": "not_tested",
+  "docker_build": "not_tested"
+}

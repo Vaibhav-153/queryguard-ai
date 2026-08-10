@@ -1,0 +1,6 @@
+dataset: data/evaluation/chinook_eval.jsonl
+output: results/latest_evaluation.json
+settings:
+  compare_result_rows: true
+  ignore_row_order_when_not_required: true
+  max_examples: null
