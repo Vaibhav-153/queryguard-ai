@@ -15,7 +15,6 @@ from queryguard.logging_config import configure_logging
 from queryguard.models import HealthResponse, QueryRequest, QueryResponse
 from queryguard.services.query_service import QueryService
 
-
 QUERY_KEY_HEADER = "X-QueryGuard-Key"
 
 
