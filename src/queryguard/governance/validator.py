@@ -4,9 +4,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-import sqlglot
-from sqlglot import exp
-from sqlglot.errors import ParseError
+try:
+    import sqlglot
+    from sqlglot import exp
+    from sqlglot.errors import ParseError
+except ImportError:  # Allows health/docs imports before dependencies are installed.
+    sqlglot = None
+    exp = None
+
+    class ParseError(Exception):
+        pass
 
 
 @dataclass(slots=True)
@@ -17,8 +24,6 @@ class SQLValidationResult:
     warnings: list[str] = field(default_factory=list)
 
 
-# We deny these node types anywhere in the tree. The list is built with names
-# so this code stays compatible across nearby SQLGlot releases.
 DENIED_NODE_NAMES = {
     "Alter",
     "Analyze",
@@ -46,17 +51,24 @@ DENIED_NODE_NAMES = {
 ALLOWED_ROOT_NAMES = {"Select", "Union", "Intersect", "Except"}
 
 
-def _node_name(node: exp.Expression) -> str:
+def _node_name(node) -> str:
     return type(node).__name__
 
 
 def validate_sql(
-    sql: str, allowed_tables: set[str], dialect: str = "sqlite"
+    sql: str,
+    allowed_tables: set[str],
+    dialect: str = "sqlite",
 ) -> SQLValidationResult:
     """Parse SQL and enforce a single read-only statement using approved tables."""
     cleaned = sql.strip()
     if not cleaned:
         return SQLValidationResult(is_safe=False, errors=["SQL is empty."])
+    if sqlglot is None or exp is None:
+        return SQLValidationResult(
+            is_safe=False,
+            errors=["SQLGlot is required for SQL validation but is not installed."],
+        )
 
     try:
         statements = sqlglot.parse(cleaned, read=dialect)

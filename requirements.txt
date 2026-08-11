@@ -1,5 +1,1 @@
-# Streamlit Community Cloud reads this file.
-# Installing the local package brings in FastAPI, SQLGlot, httpx, and other core dependencies.
--e .
-streamlit>=1.40,<2.0
-pandas>=2.2,<3.0
+-e .[ui]

@@ -1,31 +1,35 @@
-"""Minimal Ollama HTTP client with no agent framework."""
+"""Minimal Ollama HTTP client for local/offline inference."""
 
 from __future__ import annotations
 
 import httpx
 
 from queryguard.llm.base import LLMError
-from queryguard.llm.prompts import SYSTEM_PROMPT, generation_prompt, repair_prompt
-from queryguard.llm.utils import extract_sql
 
 
-class OllamaSQLGenerator:
-    """Generate SQLite with a locally running Ollama model."""
+class OllamaLLM:
+    provider_name = "ollama"
 
     def __init__(self, base_url: str, model: str, timeout_seconds: float = 120.0) -> None:
         self.base_url = base_url.rstrip("/")
-        self.model = model
+        self.model_name = model
         self.timeout_seconds = timeout_seconds
 
-    def _chat(self, user_prompt: str) -> str:
+    def complete(
+        self,
+        prompt: str,
+        *,
+        system_prompt: str,
+        max_tokens: int = 2048,
+    ) -> str:
         payload = {
-            "model": self.model,
+            "model": self.model_name,
             "stream": False,
             "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt},
             ],
-            "options": {"temperature": 0},
+            "options": {"temperature": 0, "num_predict": max_tokens},
         }
         try:
             response = httpx.post(
@@ -38,20 +42,8 @@ class OllamaSQLGenerator:
             content = data.get("message", {}).get("content")
             if not content:
                 raise LLMError("Ollama returned no message content.")
-            return extract_sql(str(content))
+            return str(content).strip()
         except httpx.HTTPError as exc:
             raise LLMError(f"Could not call Ollama: {exc}") from exc
         except (TypeError, ValueError) as exc:
             raise LLMError(f"Could not parse Ollama response: {exc}") from exc
-
-    def generate_sql(self, question: str, schema_context: str) -> str:
-        return self._chat(generation_prompt(question, schema_context))
-
-    def repair_sql(
-        self,
-        question: str,
-        schema_context: str,
-        previous_sql: str,
-        error: str,
-    ) -> str:
-        return self._chat(repair_prompt(question, schema_context, previous_sql, error))

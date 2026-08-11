@@ -1,0 +1,8 @@
+{"id":"DQ01","question":"How many annual leave days do full-time employees receive?","required_chunks":["D01"]}
+{"id":"DQ02","question":"What is the paid sick leave allowance?","required_chunks":["D02"]}
+{"id":"DQ03","question":"Is multi-factor authentication required for remote access?","required_chunks":["D03"]}
+{"id":"DQ04","question":"What is the minimum password length?","required_chunks":["D04"]}
+{"id":"DQ05","question":"What is the largest operational risk?","required_chunks":["D05"]}
+{"id":"DQ06","question":"Which business segment grew revenue?","required_chunks":["D06"]}
+{"id":"DQ07","question":"When does a hotel expense need manager approval?","required_chunks":["D07"]}
+{"id":"DQ08","question":"What travel class is required for short flights?","required_chunks":["D08"]}

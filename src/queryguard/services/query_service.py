@@ -1,10 +1,11 @@
-"""End-to-end governed text-to-SQL request service."""
+"""End-to-end governed Text-to-SQL request service."""
 
 from __future__ import annotations
 
 import logging
 import time
 from dataclasses import dataclass
+from pathlib import Path
 
 from queryguard.analysis.ambiguity import detect_ambiguity
 from queryguard.analysis.presentation import choose_chart, explain_result
@@ -70,19 +71,26 @@ def _is_security_rejection(validation: SQLValidationResult) -> bool:
 
 
 class QueryService:
+    """Coordinate retrieval, generation, validation, repair, and read-only execution."""
+
     def __init__(
         self,
         settings: Settings,
+        *,
+        database_path: Path | None = None,
         dependencies: PipelineDependencies | None = None,
     ) -> None:
         self.settings = settings
+        self.database_path = database_path or settings.database_path
+
         if dependencies is None:
-            schema = extract_schema(settings.database_path)
+            schema = extract_schema(self.database_path)
             dependencies = PipelineDependencies(
                 schema=schema,
                 retriever=build_retriever(settings, schema),
                 generator=build_sql_generator(settings),
             )
+
         self.schema = dependencies.schema
         self.retriever = dependencies.retriever
         self.generator = dependencies.generator
@@ -116,7 +124,7 @@ class QueryService:
         generation_start = time.perf_counter()
         try:
             sql = self.generator.generate_sql(question, context).strip().rstrip(";")
-        except Exception as exc:  # Converted to a controlled API error below.
+        except Exception as exc:
             LOGGER.exception("SQL generation failed")
             return QueryResponse(
                 status="error",
@@ -147,6 +155,7 @@ class QueryService:
                     retrieved_tables=retrieved_models,
                     latency_ms={**timings, "total": _milliseconds(request_start)},
                 )
+
             if self.settings.enable_repair:
                 repaired_response = self._repair_once(
                     question=question,
@@ -158,6 +167,7 @@ class QueryService:
                     sql, validation, repair_ms = repaired_response
                     timings["repair"] = repair_ms
                     repaired = True
+
             if not validation.is_safe:
                 return QueryResponse(
                     status="error",
@@ -173,7 +183,7 @@ class QueryService:
         execution_start = time.perf_counter()
         try:
             result = execute_read_only(
-                self.settings.database_path,
+                self.database_path,
                 sql,
                 max_rows=self.settings.max_result_rows,
                 timeout_ms=self.settings.query_timeout_ms,
@@ -181,72 +191,17 @@ class QueryService:
             timings["execution"] = result.execution_ms
         except DatabaseError as exc:
             timings["execution"] = _milliseconds(execution_start)
-            if self.settings.enable_repair and not repaired:
-                repaired_response = self._repair_once(
-                    question=question,
-                    context=context,
-                    previous_sql=sql,
-                    failure=str(exc),
-                )
-                if repaired_response is not None:
-                    repaired_sql, repaired_validation, repair_ms = repaired_response
-                    timings["repair"] = repair_ms
-                    repaired = True
-                    if repaired_validation.is_safe:
-                        try:
-                            result = execute_read_only(
-                                self.settings.database_path,
-                                repaired_sql,
-                                max_rows=self.settings.max_result_rows,
-                                timeout_ms=self.settings.query_timeout_ms,
-                            )
-                            sql = repaired_sql
-                            validation = repaired_validation
-                            timings["execution"] = result.execution_ms
-                        except DatabaseError as second_exc:
-                            return self._execution_error_response(
-                                question,
-                                repaired_sql,
-                                repaired_validation,
-                                retrieved_models,
-                                timings,
-                                request_start,
-                                repaired,
-                                str(second_exc),
-                            )
-                    else:
-                        return self._execution_error_response(
-                            question,
-                            repaired_sql,
-                            repaired_validation,
-                            retrieved_models,
-                            timings,
-                            request_start,
-                            repaired,
-                            "; ".join(repaired_validation.errors),
-                        )
-                else:
-                    return self._execution_error_response(
-                        question,
-                        sql,
-                        validation,
-                        retrieved_models,
-                        timings,
-                        request_start,
-                        repaired,
-                        str(exc),
-                    )
-            else:
-                return self._execution_error_response(
-                    question,
-                    sql,
-                    validation,
-                    retrieved_models,
-                    timings,
-                    request_start,
-                    repaired,
-                    str(exc),
-                )
+            return self._handle_execution_failure(
+                question=question,
+                context=context,
+                sql=sql,
+                validation=validation,
+                retrieved=retrieved_models,
+                timings=timings,
+                request_start=request_start,
+                repaired=repaired,
+                error=exc,
+            )
 
         timings["total"] = _milliseconds(request_start)
         LOGGER.info(
@@ -270,6 +225,87 @@ class QueryService:
             retrieved_tables=retrieved_models,
             latency_ms=timings,
             repaired=repaired,
+        )
+
+    def _handle_execution_failure(
+        self,
+        *,
+        question: str,
+        context: str,
+        sql: str,
+        validation: SQLValidationResult,
+        retrieved: list[RetrievedTable],
+        timings: dict[str, float],
+        request_start: float,
+        repaired: bool,
+        error: DatabaseError,
+    ) -> QueryResponse:
+        if not self.settings.enable_repair or repaired:
+            return self._execution_error_response(
+                question, sql, validation, retrieved, timings, request_start, repaired, str(error)
+            )
+
+        repair = self._repair_once(
+            question=question,
+            context=context,
+            previous_sql=sql,
+            failure=str(error),
+        )
+        if repair is None:
+            return self._execution_error_response(
+                question, sql, validation, retrieved, timings, request_start, repaired, str(error)
+            )
+
+        repaired_sql, repaired_validation, repair_ms = repair
+        timings["repair"] = repair_ms
+        repaired = True
+        if not repaired_validation.is_safe:
+            return self._execution_error_response(
+                question,
+                repaired_sql,
+                repaired_validation,
+                retrieved,
+                timings,
+                request_start,
+                repaired,
+                "; ".join(repaired_validation.errors),
+            )
+
+        try:
+            result = execute_read_only(
+                self.database_path,
+                repaired_sql,
+                max_rows=self.settings.max_result_rows,
+                timeout_ms=self.settings.query_timeout_ms,
+            )
+        except DatabaseError as second_error:
+            return self._execution_error_response(
+                question,
+                repaired_sql,
+                repaired_validation,
+                retrieved,
+                timings,
+                request_start,
+                repaired,
+                str(second_error),
+            )
+
+        timings["execution"] = result.execution_ms
+        timings["total"] = _milliseconds(request_start)
+        return QueryResponse(
+            status="success",
+            question=question,
+            sql=repaired_sql,
+            columns=result.columns,
+            rows=result.rows,
+            row_count=result.row_count,
+            truncated=result.truncated,
+            explanation=explain_result(result.columns, result.rows, result.truncated),
+            chart_type=choose_chart(result.columns, result.rows),
+            validation=_validation_model(repaired_validation),
+            retrieved_tables=retrieved,
+            latency_ms=timings,
+            repaired=True,
         )
 
     def _repair_once(
@@ -308,7 +344,6 @@ class QueryService:
         repaired: bool,
         error: str,
     ) -> QueryResponse:
-        timings = {**timings, "total": _milliseconds(request_start)}
         return QueryResponse(
             status="error",
             question=question,
@@ -317,5 +352,5 @@ class QueryService:
             validation=_validation_model(validation),
             retrieved_tables=retrieved,
             repaired=repaired,
-            latency_ms=timings,
+            latency_ms={**timings, "total": _milliseconds(request_start)},
         )

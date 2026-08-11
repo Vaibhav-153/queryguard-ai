@@ -1,21 +1,85 @@
-# DSA and computer-science concepts
+# DSA and Computer Science Concepts Used Naturally
 
-| Concept | Where it appears | Why | Complexity | Alternative |
-|---|---|---|---|---|
-| Hash set | allowed table names | O(1) average membership check | O(1) average lookup, O(n) space | list would be O(n) lookup |
-| Hash map | table name -> schema | fast schema expansion | O(1) average lookup | repeated linear scan |
-| Graph | foreign-key relationships | tables are nodes, FKs are edges | one-hop expansion O(V+E) worst case | no expansion/full schema |
-| Inverted statistics | lexical retrieval | document frequency/idf | build O(total tokens) | library TF-IDF |
-| Top-K ranking | schema retrieval | retain relevant tables | current sort O(n log n) | heap O(n log k) at larger n |
-| Vector dot product | semantic retrieval | cosine after normalization | O(nd) | ANN index |
-| AST traversal | SQL validation | structural safety checks | O(number of AST nodes) | regex is less reliable |
-| Database index | Chinook foreign keys | faster joins | DB-dependent | full scans |
-| Progress callback | query timeout | bounded execution | callback every N VM ops | database-native statement timeout |
+## Hash maps / dictionaries
 
-## Practice questions
+Where: schema lookup, JSON metadata, normalized column mapping.
 
-1. Change retrieval ranking from full sort to a heap and explain when it becomes useful.
-2. Model Chinook foreign keys as an adjacency list and find all tables within two hops.
-3. Explain why a set is preferable to a list for table allowlist membership.
-4. Given n schema documents with d-dimensional embeddings, compare exact cosine search with ANN indexing.
-5. Walk a simple SQL AST and collect all referenced physical tables while ignoring CTE aliases.
+Why: fast key-based lookup.
+
+Average lookup: O(1).
+
+Alternative: repeated list scanning O(n).
+
+Interview prompt: “Given table schemas by name, how would you retrieve one efficiently?”
+
+## Sets
+
+Where: SQL allowed tables, duplicate token/document frequencies, used sanitized names.
+
+Why: membership/deduplication.
+
+Average membership: O(1).
+
+## Graphs
+
+Relational schema can be modeled as a graph:
+
+- table = node;
+- foreign key = edge.
+
+QueryGuard uses one-hop neighbor expansion around retrieved tables.
+
+A production schema-linking feature could use BFS/shortest paths for multi-hop join discovery.
+
+## Ranking / Top-K
+
+Where: schema and document retrieval.
+
+Current implementation scores all candidates and sorts.
+
+For N documents:
+
+- scoring: O(N × query-term work);
+- sort: O(N log N).
+
+For small schemas/doc collections this is simpler than ANN infrastructure.
+
+Alternative at large scale: heap top-K O(N log K), or ANN vector index.
+
+## Inverted-index concept
+
+BM25 document frequency behaves like a small information-retrieval index: rare tokens contribute more than common tokens.
+
+Practice problem: build token → document IDs mapping and return documents containing all query terms.
+
+## AST traversal
+
+Where: SQLGlot validator.
+
+The validator walks SQL expression nodes and checks denied node types/tables.
+
+Complexity is roughly O(number of AST nodes).
+
+Practice problem: traverse an expression tree and reject a forbidden operator.
+
+## Caching
+
+Settings are cached with `lru_cache(maxsize=1)` because application environment settings should be constructed once during normal runtime.
+
+Query/document services are not globally cached for arbitrary workspaces to avoid cross-workspace data leakage.
+
+## Filesystem isolation
+
+Workspace ID maps to one directory. This is a simple namespace/isolation pattern.
+
+Production alternatives: object storage prefixes, database tenant IDs, encrypted volumes.
+
+## Database indexes and query planning
+
+SQLite indexes can reduce lookup/join work from scanning many rows to indexed lookup. QueryGuard does not automatically create indexes on uploaded databases because it is read-only. A user can inspect query plans outside the generated workflow if performance matters.
+
+## Serialization
+
+Workspace metadata/chunks/invoice records are serialized to JSON. API models are serialized by Pydantic/FastAPI.
+
+Trade-off: JSON is readable/easy but not efficient for massive document indexes.

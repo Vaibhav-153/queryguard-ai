@@ -1,13 +1,13 @@
-"""Deterministic demo generator used only for tests and offline smoke demos."""
+"""Deterministic providers used by tests and offline smoke demos."""
 
 from __future__ import annotations
 
 
 class DemoSQLGenerator:
-    """Small question-to-SQL map.
+    """Small question-to-SQL map for the bundled Chinook demo.
 
-    This is intentionally not presented as an AI model. It allows CI to test
-    the full governed pipeline without downloading an LLM.
+    It is intentionally not presented as an AI model. It exists so CI can test
+    the complete governed SQL pipeline without downloading or calling an LLM.
     """
 
     EXAMPLES: list[tuple[tuple[str, ...], str]] = [
@@ -23,7 +23,7 @@ class DemoSQLGenerator:
             GROUP BY c.CustomerId, customer
             ORDER BY revenue DESC
             LIMIT 5
-        """,
+            """,
         ),
         (
             ("revenue", "country"),
@@ -32,7 +32,7 @@ class DemoSQLGenerator:
             FROM Invoice
             GROUP BY BillingCountry
             ORDER BY revenue DESC
-        """,
+            """,
         ),
         (
             ("tracks", "genre"),
@@ -42,7 +42,7 @@ class DemoSQLGenerator:
             JOIN Track AS t ON t.GenreId = g.GenreId
             GROUP BY g.GenreId, g.Name
             ORDER BY track_count DESC
-        """,
+            """,
         ),
         (
             ("average", "track", "price"),
@@ -69,3 +69,24 @@ class DemoSQLGenerator:
         error: str,
     ) -> str:
         return self.generate_sql(question, schema_context)
+
+
+class DemoTextLLM:
+    """Deterministic text completion for document-pipeline smoke tests."""
+
+    provider_name = "demo"
+    model_name = "deterministic-demo"
+
+    def complete(
+        self,
+        prompt: str,
+        *,
+        system_prompt: str,
+        max_tokens: int = 2048,
+    ) -> str:
+        # Return a grounded-looking answer without pretending that this is an LLM.
+        evidence_line = next(
+            (line for line in prompt.splitlines() if line.strip().startswith("[S1]")),
+            "[S1] Evidence was retrieved from the uploaded document.",
+        )
+        return f"Demo mode retrieved evidence successfully. {evidence_line}"

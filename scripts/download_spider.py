@@ -1,8 +1,4 @@
-"""Download Spider 1.0 from the official Yale-linked Google Drive file.
-
-Spider is optional for this portfolio's runnable Chinook demo. This script keeps
-its separate license/provenance clear and avoids committing the large benchmark.
-"""
+"""Download the optional Spider 1.0 benchmark from the Yale-linked Drive file."""
 
 from __future__ import annotations
 
@@ -17,13 +13,13 @@ OUTPUT = Path("data/spider/spider_data.zip")
 def main() -> None:
     if shutil.which("gdown") is None:
         raise SystemExit(
-            "The official Spider file is hosted on Google Drive. Install gdown with "
-            "`python -m pip install gdown`, then run this script again."
+            "The official Spider file is hosted on Google Drive. "
+            "Install gdown with `python -m pip install gdown`, then run this script again."
         )
+
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     command = ["gdown", "--id", FILE_ID, "--output", str(OUTPUT)]
-        result = subprocess.run(command, check=False)
-
+    result = subprocess.run(command, check=False)
     if result.returncode != 0:
         raise SystemExit(result.returncode)
 

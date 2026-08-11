@@ -4,9 +4,10 @@ import httpx
 import pytest
 
 from queryguard.config import Settings
-from queryguard.llm.factory import build_sql_generator
-from queryguard.llm.gemini import GeminiSQLGenerator
-from queryguard.llm.groq import GroqSQLGenerator
+from queryguard.llm.factory import build_sql_generator, build_text_llm
+from queryguard.llm.gemini import GeminiLLM
+from queryguard.llm.groq import GroqLLM
+from queryguard.llm.sql_generator import LLMSQLGenerator
 
 
 class FakeResponse:
@@ -23,13 +24,17 @@ class FakeResponse:
                 request=self.request,
                 text=self.text,
             )
-            raise httpx.HTTPStatusError("request failed", request=self.request, response=response)
+            raise httpx.HTTPStatusError(
+                "request failed",
+                request=self.request,
+                response=response,
+            )
 
     def json(self) -> dict:
         return self._payload
 
 
-def test_gemini_extracts_sql(monkeypatch):
+def test_gemini_text_client_and_sql_adapter(monkeypatch):
     def fake_post(*args, **kwargs):
         assert kwargs["headers"]["x-goog-api-key"] == "test-key"
         return FakeResponse(
@@ -45,13 +50,19 @@ def test_gemini_extracts_sql(monkeypatch):
         )
 
     monkeypatch.setattr(httpx, "post", fake_post)
-    generator = GeminiSQLGenerator(api_key="test-key")
+    client = GeminiLLM(
+        api_key="test-key",
+        model="gemini-test",
+        base_url="https://example.test/v1beta",
+        timeout_seconds=10,
+    )
+    generator = LLMSQLGenerator(client)
     assert generator.generate_sql("How many customers?", "TABLE Customer") == (
         "SELECT COUNT(*) FROM Customer"
     )
 
 
-def test_groq_extracts_sql(monkeypatch):
+def test_groq_text_client_and_sql_adapter(monkeypatch):
     def fake_post(*args, **kwargs):
         assert kwargs["headers"]["Authorization"] == "Bearer test-key"
         return FakeResponse(
@@ -59,14 +70,20 @@ def test_groq_extracts_sql(monkeypatch):
         )
 
     monkeypatch.setattr(httpx, "post", fake_post)
-    generator = GroqSQLGenerator(api_key="test-key")
+    client = GroqLLM(
+        api_key="test-key",
+        model="test-model",
+        base_url="https://example.test/v1",
+        timeout_seconds=10,
+    )
+    generator = LLMSQLGenerator(client)
     assert generator.generate_sql("List artists", "TABLE Artist") == "SELECT Name FROM Artist"
 
 
 def test_factory_requires_gemini_key():
     settings = Settings(llm_provider="gemini", gemini_api_key=None)
     with pytest.raises(ValueError, match="QUERYGUARD_GEMINI_API_KEY"):
-        build_sql_generator(settings)
+        build_text_llm(settings)
 
 
 def test_factory_requires_groq_key():

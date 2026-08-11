@@ -1,5 +1,14 @@
+import importlib.util
+
+import pytest
+
 from queryguard.config import Settings
 from queryguard.services.query_service import QueryService
+
+pytestmark = pytest.mark.skipif(
+    importlib.util.find_spec("sqlglot") is None,
+    reason="SQLGlot is required for governed SQL integration tests.",
+)
 
 
 def test_demo_service_executes_full_pipeline(database_path):

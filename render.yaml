@@ -6,28 +6,29 @@ services:
     buildCommand: pip install -e .
     startCommand: uvicorn queryguard.api.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
+    autoDeploy: true
     envVars:
       - key: QUERYGUARD_ENVIRONMENT
         value: production
-      - key: QUERYGUARD_DATABASE_PATH
-        value: data/chinook/Chinook_Sqlite.sqlite
       - key: QUERYGUARD_LLM_PROVIDER
         value: gemini
       - key: QUERYGUARD_GEMINI_MODEL
         value: gemini-3.5-flash
-      - key: QUERYGUARD_GEMINI_THINKING_LEVEL
-        value: low
       - key: QUERYGUARD_RETRIEVAL_STRATEGY
         value: lexical
-      - key: QUERYGUARD_TOP_K_TABLES
-        value: "5"
-      - key: QUERYGUARD_MAX_RESULT_ROWS
-        value: "200"
-      - key: QUERYGUARD_QUERY_TIMEOUT_MS
-        value: "5000"
-      - key: QUERYGUARD_ENABLE_REPAIR
-        value: "true"
+      - key: QUERYGUARD_DATABASE_PATH
+        value: data/chinook/Chinook_Sqlite.sqlite
+      - key: QUERYGUARD_WORKSPACE_ROOT
+        value: /tmp/queryguard-workspaces
+      - key: QUERYGUARD_MAX_UPLOAD_MB
+        value: "25"
+      - key: QUERYGUARD_MAX_TOTAL_UPLOAD_MB
+        value: "50"
+      - key: QUERYGUARD_MAX_UPLOAD_FILES
+        value: "8"
+      - key: QUERYGUARD_WORKSPACE_TTL_MINUTES
+        value: "60"
       - key: QUERYGUARD_GEMINI_API_KEY
         sync: false
       - key: QUERYGUARD_API_ACCESS_KEY
-        generateValue: true
+        sync: false

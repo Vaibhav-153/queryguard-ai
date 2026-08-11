@@ -1,0 +1,6 @@
+order_id,customer,product,region,order_date,quantity,unit_price
+1001,Asha Retail,Analytics Starter,West,2026-01-15,2,120.00
+1002,Northwind Demo,Support Plan,North,2026-01-20,1,80.00
+1003,Asha Retail,Support Plan,West,2026-02-04,3,80.00
+1004,Bluebird Stores,Analytics Starter,South,2026-02-19,1,120.00
+1005,Northwind Demo,Analytics Pro,North,2026-03-03,1,300.00

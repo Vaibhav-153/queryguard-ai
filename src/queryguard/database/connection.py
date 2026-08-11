@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import sqlite3
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -29,11 +31,13 @@ class QueryResult:
         return len(self.rows)
 
 
-def open_read_only(database_path: Path) -> sqlite3.Connection:
-    """Open SQLite using URI read-only mode.
+@contextmanager
+def open_read_only(database_path: Path) -> Iterator[sqlite3.Connection]:
+    """Yield a SQLite connection opened in URI read-only mode.
 
-    SQLite's read-only mode is an independent safety boundary in addition to
-    the SQL AST validator. The database file must already exist.
+    The explicit ``finally: close`` matters on modern Python versions because
+    the sqlite transaction context manager does not itself guarantee that the
+    connection object is closed immediately.
     """
     resolved = database_path.expanduser().resolve()
     if not resolved.is_file():
@@ -41,9 +45,12 @@ def open_read_only(database_path: Path) -> sqlite3.Connection:
 
     uri = f"file:{resolved.as_posix()}?mode=ro"
     connection = sqlite3.connect(uri, uri=True, check_same_thread=False)
-    connection.row_factory = sqlite3.Row
-    connection.execute("PRAGMA query_only = ON")
-    return connection
+    try:
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA query_only = ON")
+        yield connection
+    finally:
+        connection.close()
 
 
 def execute_read_only(

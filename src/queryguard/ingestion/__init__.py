@@ -1,0 +1,1 @@
+"""QueryGuard package module."""

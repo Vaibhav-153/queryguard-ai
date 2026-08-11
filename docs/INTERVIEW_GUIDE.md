@@ -1,48 +1,130 @@
-# Interview guide
+# Interview Guide
 
 ## 30-second explanation
 
-QueryGuard AI is a governed Text-to-SQL analytics copilot. A user asks a business question, the system retrieves relevant schema context, uses a local Ollama model to propose SQL, parses that SQL with SQLGlot, blocks unsafe or unapproved statements, executes approved queries through read-only SQLite, and returns verified rows. I also built retrieval and execution evaluation so I can measure components instead of assuming they help.
+“QueryGuard AI is a governed data and document analytics platform. For databases and spreadsheets, it retrieves relevant schema, uses an LLM to generate SQL, validates that SQL structurally with SQLGlot, and executes only through a read-only SQLite connection. For PDF, Word, and PowerPoint it uses evidence retrieval and returns source locations. I also added invoice extraction that normalizes fields into SQLite while retaining document text. It runs with local Ollama or hosted Gemini/Groq and includes component evaluation, security tests, Docker, CI, and full documentation.”
 
 ## 60-second explanation
 
-The main design decision was to treat model output as untrusted. Prompt instructions alone are not security, so generated SQL goes through AST validation and an independent read-only database connection. I first built a transparent lexical schema retriever and measured table Recall@K, then added an optional Sentence Transformer retriever for semantic comparison. I also distinguish ambiguous user requests from executable ones and allow only one correction attempt for normal failures. The repository includes FastAPI, Streamlit, pytest tests, Docker, CI, data provenance, and a saved evaluation format.
+Start with the problem: LLM-generated SQL can be unsafe/wrong and document answers can hallucinate. Explain the two pipelines: structured Text-to-SQL and unstructured RAG. Mention workspaces so Chinook is only a demo rather than a hardcoded dependency. Explain AST validation + read-only DB as defense in depth. Mention measured retrieval metrics and honest untested model/OCR claims.
 
-## Common technical questions
+## 3-minute explanation outline
+
+1. Problem/users.
+2. Original Chinook baseline.
+3. Schema retrieval.
+4. SQL generation + SQLGlot + read-only execution.
+5. Dynamic upload workspace.
+6. Excel/CSV reuse through SQLite conversion.
+7. document source-aware RAG.
+8. invoice hybrid architecture.
+9. Ollama/Gemini/Groq provider abstraction.
+10. tests/evaluation/limitations.
+
+## Design questions
+
+### Why not let the LLM execute SQL directly?
+
+Prompts are probabilistic and not a security boundary. I separate generation from validation/execution. SQLGlot checks structure and referenced tables; SQLite is opened independently in read-only mode.
 
 ### Why SQLGlot instead of regex?
-SQL is a grammar with nesting, comments, CTEs and dialect details. Regex can detect some obvious words but is not a structural policy engine. An AST lets the code inspect statement and table nodes explicitly.
 
-### Why is SQLite read-only mode still needed after validation?
-Defense in depth. A validator bug or parser edge case should not automatically become write access.
+SQL has nesting, CTEs, aliases, comments, and dialect details. Regex cannot reliably understand the query tree. An AST lets me detect operation node types and physical table references.
 
-### Why not send the full schema?
-It is acceptable as a baseline for tiny schemas, but irrelevant columns increase prompt length and ambiguity. Retrieval becomes more important as schemas grow.
+### Why convert Excel to SQLite?
 
-### Why no vector database?
-The schema is small. Exact cosine search is simpler and measurable. I would add FAISS or a vector service only after scale data justified it.
+It reuses the same proven analytics path: schema extraction, retrieval, validation, time/row limits, evaluation, and exports. A second pandas-only NL query engine would duplicate logic and governance.
 
-### Why only one repair attempt?
-Unbounded self-correction can hide failures, increase latency, and make behavior unpredictable. One attempt is easy to evaluate and reason about.
+### Why not convert PDF to SQL too?
 
-### Does safe SQL mean correct SQL?
-No. Safety, executability and semantic correctness are different properties. The evaluation runner compares executed results against gold SQL where possible.
+PDF paragraphs/pages are unstructured evidence, not naturally relational rows. RAG preserves page/section context and is a better abstraction for textual questions.
 
-### What would you change for PostgreSQL production use?
-Use a dedicated read-only role, database-native statement timeouts, connection pooling, explicit schema permissions, authenticated users, row/column policies, audit logs, and PostgreSQL-specific SQLGlot dialect tests.
+### Why no agent?
 
-## Debugging story to prepare
+The workflow is deterministic: retrieve → generate → validate → execute. An open-ended agent loop would add latency, cost, and harder failure analysis without a requirement. I allow only one bounded SQL repair attempt.
 
-Use a real experiment from `results/` after running Ollama. Explain one failure where schema retrieval missed a required table or the LLM chose the wrong join, how you reproduced it, what signal showed the cause, what change you made, and whether metrics improved. Do not invent a failure percentage.
+### Why lexical retrieval if embeddings exist?
 
-## Five-minute demo
+It is reproducible, cheap, explainable, and performs strongly on the small Chinook schema. Semantic retrieval is optional and useful for vocabulary mismatch, demonstrated by a known lexical document failure.
 
-1. Open architecture diagram (30 sec).
-2. Ask “Show the top 5 customers by revenue” (60 sec).
-3. Show retrieved tables and generated SQL (45 sec).
-4. Show governance status and read-only result (45 sec).
-5. Ask “Who are the best customers?” to demonstrate clarification (30 sec).
-6. Show a blocked destructive SQL unit test (45 sec).
-7. Open `results/` and explain measured vs untested metrics (45 sec).
+### How would you scale schema retrieval?
 
-Backup if the model is unavailable: run demo provider, clearly label it as deterministic smoke mode, then show saved real-model evaluation only if one was actually produced earlier.
+At current scale, linear ranking is trivial. With thousands/millions of schema/document vectors, I would persist embeddings and introduce an ANN index such as FAISS or a suitable vector-capable database after measuring the need.
+
+### How do you know an answer is correct?
+
+I separate claims. For SQL, execution against the real database proves the displayed rows came from that SQL, not that the SQL perfectly matches intent. I use gold-result execution match in evaluation. For documents, I return retrieved evidence and evaluate retrieval separately; LLM answer correctness still needs labeled evaluation/human review.
+
+### What happens without foreign keys?
+
+QueryGuard still knows table/column names but does not invent declared relationships. For Excel, that is a known limitation. A future UI could let the user define relationships explicitly.
+
+### What if an uploaded PDF says “ignore the system prompt”?
+
+Document content is marked untrusted in the system prompt. Retrieval returns evidence as data. This reduces risk but does not guarantee model-level prompt-injection immunity; production would add more policy/testing layers.
+
+### Why multiple LLM providers?
+
+It solves deployment/privacy constraints: Ollama enables local/offline use, Gemini enables a lightweight public demo, Groq is an alternative, and demo mode keeps CI deterministic. The application logic is provider-independent.
+
+## Debugging stories
+
+### Chinook checksum failure in Codespaces
+
+Symptom: SQL checksum differed across environments.
+
+Root cause: Git normalized `.sql` to LF, so raw byte hashes differed from the original source representation.
+
+Fix: normalize CRLF/CR to LF before hashing. Keep validation instead of deleting the checksum.
+
+Learning: reproducibility checks must account for text normalization.
+
+### Render/Streamlit access-key mismatch
+
+Symptom: Streamlit could reach the API but `/query` returned 401.
+
+Root cause: hosted services loaded different shared-secret values / stale deployments.
+
+Fix: make `QUERYGUARD_API_ACCESS_KEY` an explicitly entered `sync:false` secret, save/deploy Render, reboot Streamlit, keep Gemini key only on backend.
+
+Learning: connectivity and authentication failures are different layers; `/health` helped isolate them.
+
+### Ruff CI failures
+
+Symptom: deployment worked but GitHub Actions was red before tests.
+
+Fix: move formatting/import cleanup into local/Codespaces workflow and make CI check, not silently auto-fix committed source.
+
+Learning: CI should detect source quality regression, not modify repository state.
+
+## Security questions
+
+### Can an attacker upload `../../secret.db`?
+
+Server uses `Path(name).name` plus filename sanitization and writes only inside a server-generated workspace directory.
+
+### Can a generated query `DROP TABLE`?
+
+SQLGlot rejects it, and the SQLite connection is independently read-only.
+
+### Is `X-QueryGuard-Key` real authentication?
+
+No. It is a shared-secret protection suitable for a portfolio frontend/backend pair. Production needs user identity/authentication/authorization.
+
+## Failure/limitation questions
+
+### Biggest current limitation?
+
+AI semantic correctness and uploaded-data ambiguity. Safe execution does not guarantee correct business interpretation. Excel relationship metadata is also weak, and invoice extraction is only an explainable baseline.
+
+### A negative experiment/result?
+
+Lexical document retrieval misses one synthetic password-length question because the wording differs from evidence. I kept the miss and documented semantic retrieval as the appropriate improvement rather than rewriting the benchmark to make it perfect.
+
+## DSA/CS quick questions
+
+- Why sets for table allowlists? O(1) average membership and deduplication.
+- Why dictionary/hash map for schema lookup? Efficient table-name lookup.
+- Where is a graph present? Foreign-key relationships between tables.
+- Top-K retrieval complexity? Current linear scoring O(N) over schema/chunks plus sorting O(N log N); sufficient for small personal indexes.
+- Why UUID workspace IDs? Non-user-controlled identifiers with negligible collision probability for this scope.

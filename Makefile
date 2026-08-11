@@ -1,28 +1,33 @@
-.PHONY: install install-all test lint api ui demo-eval setup-data docker
+.PHONY: install test lint format format-check verify api ui demo-eval retrieval-eval
 
 install:
-	python -m pip install -e ".[dev]"
-
-install-all:
-	python -m pip install -e ".[all]"
-
-setup-data:
-	python scripts/setup_chinook.py
+	python -m pip install -e ".[ui,dev]"
 
 test:
-	pytest
+	pytest -v
 
 lint:
-	ruff check src tests scripts
+	ruff check app src tests scripts
+
+format-check:
+	ruff format --check app src tests scripts
+
+format:
+	ruff check app src tests scripts --fix
+	ruff format app src tests scripts
+
+verify:
+	python scripts/setup_chinook.py
+	queryguard-verify
 
 api:
-	uvicorn queryguard.api.main:app --reload --port 8000
+	uvicorn queryguard.api.main:app --reload
 
 ui:
 	streamlit run app/streamlit_app.py
 
 demo-eval:
-	python -m queryguard.evaluation.runner --provider demo --max-examples 6
+	python scripts/run_demo_evaluation.py
 
-docker:
-	docker compose up --build
+retrieval-eval:
+	python scripts/evaluate_retrieval.py

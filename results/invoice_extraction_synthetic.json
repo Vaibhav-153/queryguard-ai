@@ -1,0 +1,49 @@
+{
+  "status": "Measured",
+  "scope": "Heuristic extraction on hand-authored synthetic invoice text; not production OCR accuracy.",
+  "examples": 3,
+  "field_exact_match": 1.0,
+  "fields": [
+    "invoice_number",
+    "vendor",
+    "currency",
+    "subtotal",
+    "tax",
+    "total"
+  ],
+  "records": [
+    {
+      "id": "I01",
+      "fields": {
+        "invoice_number": true,
+        "vendor": true,
+        "currency": true,
+        "subtotal": true,
+        "tax": true,
+        "total": true
+      }
+    },
+    {
+      "id": "I02",
+      "fields": {
+        "invoice_number": true,
+        "vendor": true,
+        "currency": true,
+        "subtotal": true,
+        "tax": true,
+        "total": true
+      }
+    },
+    {
+      "id": "I03",
+      "fields": {
+        "invoice_number": true,
+        "vendor": true,
+        "currency": true,
+        "subtotal": true,
+        "tax": true,
+        "total": true
+      }
+    }
+  ]
+}
