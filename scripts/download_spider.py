@@ -26,7 +26,10 @@ def main() -> None:
     if result.returncode != 0:
         raise SystemExit(result.returncode)
     print(f"Downloaded Spider archive to {OUTPUT}")
-    print("Verify the current license and release notes on https://yale-lily.github.io/spider before use.")
+        print(
+        "Verify the current license and release notes on "
+        "https://yale-lily.github.io/spider before use."
+    )
 
 
 if __name__ == "__main__":
