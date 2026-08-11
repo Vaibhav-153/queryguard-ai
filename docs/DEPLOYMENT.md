@@ -1,99 +1,79 @@
-# Deployment guide
+# Deployment Overview
 
-For the recruiter-facing cloud deployment, follow [`CLOUD_DEPLOYMENT.md`](CLOUD_DEPLOYMENT.md).
+QueryGuard supports three practical execution styles. Detailed commands live in `LOCAL_SETUP.md` and `CLOUD_DEPLOYMENT.md`.
 
-## Supported modes
+## 1. Local Python
 
-| Mode | Provider | Secret required | Best use |
-|---|---|---|---|
-| Offline smoke | `demo` | No | CI and pipeline checks |
-| Local AI | `ollama` | No | local/private inference |
-| Hosted default | `gemini` | Gemini API key | public portfolio preview |
-| Hosted alternative | `groq` | Groq API key | free-plan/open-model alternative |
+Best for learning and development.
 
-## Local installation
+```text
+Streamlit -> localhost FastAPI -> Demo/Ollama/Gemini/Groq -> local workspaces
+```
+
+Install:
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate
+# activate the environment
+python -m pip install --upgrade pip
 pip install -e ".[ui,dev]"
 python scripts/setup_chinook.py
-cp .env.example .env
 ```
 
-Windows PowerShell activation:
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-## Run API
+Run API:
 
 ```bash
-uvicorn queryguard.api.main:app --host 0.0.0.0 --port 8000
+uvicorn queryguard.api.main:app --reload
 ```
 
-Health check:
+Run UI in a second terminal:
 
 ```bash
-curl http://localhost:8000/health
+streamlit run app/streamlit_app.py
 ```
 
-## Run UI
+## 2. Local Docker Compose
 
-```bash
-QUERYGUARD_API_URL=http://localhost:8000 streamlit run app/streamlit_app.py
-```
-
-## Provider variables
-
-### Ollama
-
-```text
-QUERYGUARD_LLM_PROVIDER=ollama
-QUERYGUARD_OLLAMA_BASE_URL=http://localhost:11434
-QUERYGUARD_OLLAMA_MODEL=qwen2.5-coder:7b
-```
-
-### Gemini
-
-```text
-QUERYGUARD_LLM_PROVIDER=gemini
-QUERYGUARD_GEMINI_API_KEY=<secret>
-QUERYGUARD_GEMINI_MODEL=gemini-3.5-flash
-QUERYGUARD_GEMINI_THINKING_LEVEL=low
-```
-
-### Groq
-
-```text
-QUERYGUARD_LLM_PROVIDER=groq
-QUERYGUARD_GROQ_API_KEY=<secret>
-QUERYGUARD_GROQ_MODEL=qwen/qwen3.6-27b
-```
-
-## API protection
-
-If `QUERYGUARD_API_ACCESS_KEY` is set, `/query` requires:
-
-```text
-X-QueryGuard-Key: <same secret>
-```
-
-The `/health` and `/schema` endpoints remain public for portfolio inspection of the sample Chinook deployment.
-
-## Render port support
-
-The `queryguard-api` console command reads the standard `PORT` environment variable. `render.yaml` also starts Uvicorn with `$PORT`, so the backend binds correctly on Render.
-
-## Docker
+Best for a reproducible two-container demonstration.
 
 ```bash
 docker compose up --build
 ```
 
-Compose defaults to the deterministic demo provider. To use a real provider, pass the matching environment variables before starting Compose.
+The API image includes Tesseract + the Python OCR adapter so scanned PDF/image invoice workflows can run in the container path. The default provider is `demo`; set provider environment variables before Compose when using Ollama/Gemini/Groq.
+
+## 3. Hosted portfolio preview
+
+```text
+Browser
+  -> Streamlit Community Cloud
+  -> HTTPS + X-QueryGuard-Key
+  -> Render FastAPI
+  -> Gemini (default hosted provider)
+  -> temporary /tmp workspaces
+```
+
+The public preview intentionally uses smaller upload limits and lexical retrieval to keep the backend lightweight. Render's ephemeral filesystem means uploaded workspaces are temporary and can disappear on restart/redeploy; that is acceptable for the portfolio workflow and is not presented as durable storage.
+
+## Provider modes
+
+| Provider | Network required? | Secret | Intended use |
+|---|---:|---|---|
+| `demo` | No | none | deterministic Chinook/CI smoke checks |
+| `ollama` | only local Ollama HTTP | none | private/local AI |
+| `gemini` | Yes | Gemini API key | hosted demo |
+| `groq` | Yes | Groq API key | optional hosted alternative |
+
+## API access control
+
+Set the same private value on the API and UI:
+
+```text
+QUERYGUARD_API_ACCESS_KEY=<random private value>
+```
+
+The UI sends it in `X-QueryGuard-Key`. The value must never be committed to GitHub.
 
 ## Production boundary
 
-This repository is suitable for a portfolio preview. A real enterprise deployment still needs user authentication, authorization, per-user quotas, audited access policy, production database roles, monitoring, durable rate limiting, private network design, and a deployment-specific threat review.
+A real multi-user product would need authenticated users, per-user authorization/quotas, durable encrypted storage, malware scanning, production database roles, centralized monitoring/audit logs, and a deployment-specific threat review.

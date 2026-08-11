@@ -1,0 +1,85 @@
+{
+  "status": "Measured",
+  "scope": "Lexical document retrieval on a small hand-authored synthetic evaluation set.",
+  "examples": 8,
+  "hit_at_1": 0.875,
+  "hit_at_3": 0.875,
+  "records": [
+    {
+      "id": "DQ01",
+      "retrieved": [
+        "D01",
+        "D02",
+        "D04"
+      ],
+      "hit_at_1": 1.0,
+      "hit_at_3": 1.0
+    },
+    {
+      "id": "DQ02",
+      "retrieved": [
+        "D02",
+        "D05",
+        "D01"
+      ],
+      "hit_at_1": 1.0,
+      "hit_at_3": 1.0
+    },
+    {
+      "id": "DQ03",
+      "retrieved": [
+        "D03",
+        "D08",
+        "D05"
+      ],
+      "hit_at_1": 1.0,
+      "hit_at_3": 1.0
+    },
+    {
+      "id": "DQ04",
+      "retrieved": [
+        "D05",
+        "D06",
+        "D03"
+      ],
+      "hit_at_1": 0.0,
+      "hit_at_3": 0.0
+    },
+    {
+      "id": "DQ05",
+      "retrieved": [
+        "D05",
+        "D06",
+        "D03"
+      ],
+      "hit_at_1": 1.0,
+      "hit_at_3": 1.0
+    },
+    {
+      "id": "DQ06",
+      "retrieved": [
+        "D06"
+      ],
+      "hit_at_1": 1.0,
+      "hit_at_3": 1.0
+    },
+    {
+      "id": "DQ07",
+      "retrieved": [
+        "D07"
+      ],
+      "hit_at_1": 1.0,
+      "hit_at_3": 1.0
+    },
+    {
+      "id": "DQ08",
+      "retrieved": [
+        "D08",
+        "D03",
+        "D05"
+      ],
+      "hit_at_1": 1.0,
+      "hit_at_3": 1.0
+    }
+  ]
+}

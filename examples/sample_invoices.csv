@@ -1,0 +1,4 @@
+invoice_number,vendor,invoice_date,due_date,currency,subtotal,tax,total
+INV-1001,Acme Office Supplies,2026-01-05,2026-02-04,USD,120.00,12.00,132.00
+INV-1002,Northstar Hosting,2026-01-15,2026-01-30,USD,250.00,0.00,250.00
+INV-1003,Acme Office Supplies,2026-02-05,2026-03-07,USD,80.00,8.00,88.00

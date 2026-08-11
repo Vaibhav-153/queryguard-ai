@@ -1,35 +1,37 @@
 # Python
 __pycache__/
 *.py[cod]
-*.egg-info/
+*.so
 .pytest_cache/
 .coverage
 htmlcov/
 .ruff_cache/
+
+# Environments and secrets
 .venv/
 venv/
-
-# Environment / secrets
 .env
-.env.*
-!.env.example
-
-# Runtime outputs
-logs/*.log
-results/*.json
-results/*.csv
-!results/lexical_retrieval_baseline.json
-!results/build_metadata.json
-artifacts/embeddings/*
-!artifacts/embeddings/.gitkeep
-
-# Optional benchmark data (download locally; do not commit)
-data/spider/
-data/raw/
+.streamlit/secrets.toml
 
 # IDE / OS
-.DS_Store
 .vscode/
 .idea/
+.DS_Store
+Thumbs.db
 
-.streamlit/secrets.toml
+# Runtime files
+data/workspaces/*
+!data/workspaces/.gitkeep
+
+# Optional downloaded benchmark
+data/spider/*
+!data/spider/.gitkeep
+
+# User uploads and generated exports
+*.tmp
+*.temp
+# Packaging artifacts
+build/
+dist/
+*.egg-info/
+

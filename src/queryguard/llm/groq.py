@@ -1,40 +1,44 @@
-"""Groq REST client using its OpenAI-compatible chat endpoint."""
+"""Minimal Groq REST client using its OpenAI-compatible chat endpoint."""
 
 from __future__ import annotations
 
 import httpx
 
 from queryguard.llm.base import LLMError
-from queryguard.llm.prompts import SYSTEM_PROMPT, generation_prompt, repair_prompt
-from queryguard.llm.utils import extract_sql
 
 
-class GroqSQLGenerator:
-    """Generate SQLite with a Groq-hosted model."""
+class GroqLLM:
+    provider_name = "groq"
 
     def __init__(
         self,
         api_key: str,
-        model: str = "qwen/qwen3.6-27b",
-        base_url: str = "https://api.groq.com/openai/v1",
-        timeout_seconds: float = 60.0,
+        model: str,
+        base_url: str,
+        timeout_seconds: float,
     ) -> None:
         if not api_key.strip():
             raise ValueError("A Groq API key is required for the groq provider.")
         self.api_key = api_key
-        self.model = model
+        self.model_name = model
         self.base_url = base_url.rstrip("/")
         self.timeout_seconds = timeout_seconds
 
-    def _chat(self, user_prompt: str) -> str:
+    def complete(
+        self,
+        prompt: str,
+        *,
+        system_prompt: str,
+        max_tokens: int = 2048,
+    ) -> str:
         payload = {
-            "model": self.model,
+            "model": self.model_name,
             "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt},
             ],
             "temperature": 0,
-            "max_completion_tokens": 2048,
+            "max_completion_tokens": max_tokens,
             "stream": False,
         }
         try:
@@ -55,7 +59,7 @@ class GroqSQLGenerator:
             content = choices[0].get("message", {}).get("content")
             if not content:
                 raise LLMError("Groq returned no message content.")
-            return extract_sql(str(content))
+            return str(content).strip()
         except httpx.HTTPStatusError as exc:
             detail = exc.response.text[:500] if exc.response is not None else str(exc)
             raise LLMError(f"Groq API request failed: {detail}") from exc
@@ -63,15 +67,3 @@ class GroqSQLGenerator:
             raise LLMError(f"Could not call Groq: {exc}") from exc
         except (TypeError, ValueError, KeyError) as exc:
             raise LLMError(f"Could not parse Groq response: {exc}") from exc
-
-    def generate_sql(self, question: str, schema_context: str) -> str:
-        return self._chat(generation_prompt(question, schema_context))
-
-    def repair_sql(
-        self,
-        question: str,
-        schema_context: str,
-        previous_sql: str,
-        error: str,
-    ) -> str:
-        return self._chat(repair_prompt(question, schema_context, previous_sql, error))

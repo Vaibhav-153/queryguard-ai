@@ -4,29 +4,29 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      QUERYGUARD_DATABASE_PATH: data/chinook/Chinook_Sqlite.sqlite
       QUERYGUARD_LLM_PROVIDER: ${QUERYGUARD_LLM_PROVIDER:-demo}
       QUERYGUARD_OLLAMA_BASE_URL: ${QUERYGUARD_OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       QUERYGUARD_OLLAMA_MODEL: ${QUERYGUARD_OLLAMA_MODEL:-qwen2.5-coder:7b}
       QUERYGUARD_GEMINI_API_KEY: ${QUERYGUARD_GEMINI_API_KEY:-}
-      QUERYGUARD_GEMINI_MODEL: ${QUERYGUARD_GEMINI_MODEL:-gemini-3.5-flash}
       QUERYGUARD_GROQ_API_KEY: ${QUERYGUARD_GROQ_API_KEY:-}
-      QUERYGUARD_GROQ_MODEL: ${QUERYGUARD_GROQ_MODEL:-qwen/qwen3.6-27b}
       QUERYGUARD_API_ACCESS_KEY: ${QUERYGUARD_API_ACCESS_KEY:-}
-      QUERYGUARD_RETRIEVAL_STRATEGY: ${QUERYGUARD_RETRIEVAL_STRATEGY:-lexical}
+      QUERYGUARD_WORKSPACE_ROOT: /app/data/workspaces
     ports:
       - "8000:8000"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    volumes:
+      - queryguard_workspaces:/app/data/workspaces
 
   ui:
     build:
       context: .
       dockerfile: Dockerfile.ui
+    depends_on:
+      - api
     environment:
       QUERYGUARD_API_URL: http://api:8000
       QUERYGUARD_API_ACCESS_KEY: ${QUERYGUARD_API_ACCESS_KEY:-}
     ports:
       - "8501:8501"
-    depends_on:
-      - api
+
+volumes:
+  queryguard_workspaces:

@@ -1,27 +1,66 @@
-# Data documentation
+# Data Directory
 
-## Bundled dataset: Chinook 1.4.5
+This repository contains only public demo/evaluation data. Runtime user uploads are stored temporarily under `data/workspaces/` and are Git-ignored.
 
-Source: https://github.com/lerocha/chinook-database
-Official release used: v1.4.5
-License: MIT (upstream license applies to Chinook files)
+## Layout
 
-Bundled files:
-- `chinook/Chinook_Sqlite.sql` - official SQL creation/population script.
-- `chinook/Chinook_Sqlite.sqlite` - generated locally from that script.
+```text
+data/
+├── chinook/                  # bundled public SQLite demo + upstream licenses
+├── evaluation/               # small project evaluation sets
+├── spider/                   # optional downloaded benchmark; not committed
+└── workspaces/               # runtime uploads; not committed
+```
 
-Checksums produced during project build:
-- SQL SHA-256: `fdcb271b3e9c840216b09168752bddca973ed3917b40e49b603b15831114aea1`
-- SQLite SHA-256: `79df86ebd5c45f009ed35dbb19757cac4f9afb393352e3d2ffe128a60a2ea718`
+## Chinook
 
-The upstream project describes the database as a digital media store. Customer and employee records are fictitious/manual sample records and sales information is generated sample data. Do not treat it as representative production customer behavior.
+Version: `v1.4.5`.
 
-## Custom evaluation set
+Upstream: https://github.com/lerocha/chinook-database
 
-`evaluation/chinook_eval.jsonl` contains manually written natural-language questions and executable gold SQL for the bundled Chinook database. It is for engineering evaluation and regression testing; it is not a statistically representative user study.
+License: MIT. See the license files in `data/chinook/`.
 
-## Spider 1.0
+Verified smoke checks:
 
-Spider is not committed into this repository because it is much larger and has its own CC BY-SA 4.0 licensing/provenance. Use `python scripts/download_spider.py` after installing `gdown`, or download it from the official Yale page and place it under `data/spider/`.
+```text
+Customers: 59
+Tracks: 3503
+Total invoice revenue: 2328.60
+```
 
-Never mix Spider tuning examples into the final held-out evaluation split.
+Repository LF-normalized SQL SHA-256:
+
+```text
+caf31d698a4a79c628215b552dfe6575e71be052ae02b8f18e763498f55f5d44
+```
+
+Rebuild:
+
+```bash
+python scripts/setup_chinook.py
+queryguard-verify
+```
+
+## Evaluation sets
+
+- `chinook_eval.jsonl`: 15 structured-data questions.
+- `synthetic_document_chunks.jsonl`: hand-authored document evidence.
+- `synthetic_document_eval.jsonl`: 8 retrieval questions.
+- `synthetic_invoice_eval.jsonl`: 3 simple invoice extraction examples.
+
+The synthetic files are regression/evaluation aids created for this project; they are not representative real-world benchmarks.
+
+## Spider
+
+Spider is optional and separately licensed. It is deliberately not bundled.
+
+```bash
+python -m pip install gdown
+python scripts/download_spider.py
+```
+
+Check current upstream documentation before use: https://yale-lily.github.io/spider
+
+## Privacy
+
+Never commit personal uploaded databases/documents/invoices. `data/workspaces/` is temporary and ignored by Git.

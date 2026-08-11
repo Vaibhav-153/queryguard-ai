@@ -1,4 +1,4 @@
-from queryguard.llm.ollama import extract_sql
+from queryguard.llm.utils import extract_sql
 
 
 def test_extract_sql_from_markdown_fence():

@@ -1,8 +1,16 @@
+import importlib.util
+
 import pytest
 
 from queryguard.governance.validator import validate_sql
 
+pytestmark = pytest.mark.skipif(
+    importlib.util.find_spec("sqlglot") is None,
+    reason="SQLGlot is required for AST governance tests.",
+)
+
 ALLOWED = {"customer", "invoice", "track", "artist", "genre"}
+
 
 @pytest.mark.parametrize(
     "sql",
@@ -32,17 +40,21 @@ def test_unapproved_table_is_blocked():
 
 
 def test_safe_join_is_allowed():
-    result = validate_sql(
-        "SELECT c.CustomerId, SUM(i.Total) FROM Customer c JOIN Invoice i ON i.CustomerId=c.CustomerId GROUP BY c.CustomerId",
-        ALLOWED,
+    sql = (
+        "SELECT c.CustomerId, SUM(i.Total) "
+        "FROM Customer c JOIN Invoice i ON i.CustomerId=c.CustomerId "
+        "GROUP BY c.CustomerId"
     )
+    result = validate_sql(sql, ALLOWED)
     assert result.is_safe is True
     assert set(result.tables) == {"Customer", "Invoice"}
 
 
 def test_cte_is_allowed_without_treating_cte_alias_as_database_table():
-    result = validate_sql(
-        "WITH totals AS (SELECT CustomerId, SUM(Total) AS revenue FROM Invoice GROUP BY CustomerId) SELECT c.CustomerId, t.revenue FROM Customer c JOIN totals t ON t.CustomerId=c.CustomerId",
-        ALLOWED,
+    sql = (
+        "WITH totals AS (SELECT CustomerId, SUM(Total) AS revenue FROM Invoice "
+        "GROUP BY CustomerId) SELECT c.CustomerId, t.revenue FROM Customer c "
+        "JOIN totals t ON t.CustomerId=c.CustomerId"
     )
+    result = validate_sql(sql, ALLOWED)
     assert result.is_safe is True

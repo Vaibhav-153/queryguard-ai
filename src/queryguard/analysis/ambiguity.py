@@ -54,7 +54,8 @@ def detect_ambiguity(question: str) -> AmbiguityResult:
         )
 
     if "recent" in words and not any(
-        unit in words for unit in {"day", "days", "week", "weeks", "month", "months", "year", "years"}
+        unit in words
+        for unit in {"day", "days", "week", "weeks", "month", "months", "year", "years"}
     ):
         return AmbiguityResult(
             ambiguous=True,

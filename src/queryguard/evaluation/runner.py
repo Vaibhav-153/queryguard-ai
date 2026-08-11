@@ -69,7 +69,9 @@ def run_evaluation(settings: Settings, dataset_path: Path, max_examples: int | N
     latencies = [float(record["total_latency_ms"]) for record in records]
     summary = {
         "examples": len(records),
-        "successful_execution_rate": mean([1.0 if r["status"] == "success" else 0.0 for r in records]),
+        "successful_execution_rate": mean(
+            [1.0 if r["status"] == "success" else 0.0 for r in records]
+        ),
         "execution_match_rate": mean([1.0 if r["execution_match"] else 0.0 for r in records]),
         "table_recall_at_3": mean([float(r["table_recall_at_3"]) for r in records]),
         "table_recall_at_5": mean([float(r["table_recall_at_5"]) for r in records]),

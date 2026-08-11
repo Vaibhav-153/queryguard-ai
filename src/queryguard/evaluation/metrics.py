@@ -27,7 +27,9 @@ def result_match(
 ) -> bool:
     if [name.lower() for name in generated_columns] != [name.lower() for name in gold_columns]:
         return False
-    return normalize_rows(generated_rows, order_sensitive) == normalize_rows(gold_rows, order_sensitive)
+    return normalize_rows(generated_rows, order_sensitive) == normalize_rows(
+        gold_rows, order_sensitive
+    )
 
 
 def table_recall_at_k(retrieved: list[str], required: list[str], k: int) -> float:
