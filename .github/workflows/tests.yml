@@ -4,20 +4,34 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
           cache: pip
-      - name: Install
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      - name: Install project
         run: pip install -e ".[dev]"
+
       - name: Ruff
-        run: ruff check src tests scripts
-      - name: Tests
-        run: pytest --cov=queryguard --cov-report=term-missing
-      - name: Compile
-        run: python -m compileall -q src scripts app
+        run: ruff check app src tests scripts
+
+      - name: Rebuild Chinook database
+        run: python scripts/setup_chinook.py
+
+      - name: Run tests
+        run: pytest -v
