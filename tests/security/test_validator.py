@@ -4,6 +4,7 @@ from queryguard.governance.validator import validate_sql
 
 ALLOWED = {"customer", "invoice", "track", "artist", "genre"}
 
+
 @pytest.mark.parametrize(
     "sql",
     [

@@ -37,9 +37,7 @@ def test_gemini_extracts_sql(monkeypatch):
                 "candidates": [
                     {
                         "content": {
-                            "parts": [
-                                {"text": "```sql\nSELECT COUNT(*) FROM Customer;\n```"}
-                            ]
+                            "parts": [{"text": "```sql\nSELECT COUNT(*) FROM Customer;\n```"}]
                         }
                     }
                 ]
@@ -57,11 +55,7 @@ def test_groq_extracts_sql(monkeypatch):
     def fake_post(*args, **kwargs):
         assert kwargs["headers"]["Authorization"] == "Bearer test-key"
         return FakeResponse(
-            {
-                "choices": [
-                    {"message": {"content": "Here is SQL: SELECT Name FROM Artist;"}}
-                ]
-            }
+            {"choices": [{"message": {"content": "Here is SQL: SELECT Name FROM Artist;"}}]}
         )
 
     monkeypatch.setattr(httpx, "post", fake_post)

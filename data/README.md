@@ -1,27 +1,30 @@
-# Data documentation
+# Data Documentation
 
-## Bundled dataset: Chinook 1.4.5
+This directory contains the datasets and evaluation data used by QueryGuard AI.
 
-Source: https://github.com/lerocha/chinook-database
-Official release used: v1.4.5
-License: MIT (upstream license applies to Chinook files)
+The project deliberately separates:
 
-Bundled files:
-- `chinook/Chinook_Sqlite.sql` - official SQL creation/population script.
-- `chinook/Chinook_Sqlite.sqlite` - generated locally from that script.
+1. the small local database used for the working application and recruiter demo;
+2. the manually reviewed evaluation dataset used for repeatable testing;
+3. larger optional external benchmarks that are downloaded separately.
 
-Checksums produced during project build:
-- SQL SHA-256: `fdcb271b3e9c840216b09168752bddca973ed3917b40e49b603b15831114aea1`
-- SQLite SHA-256: `79df86ebd5c45f009ed35dbb19757cac4f9afb393352e3d2ffe128a60a2ea718`
+No private, confidential, customer, medical, financial, or personally collected user data is required by this project.
 
-The upstream project describes the database as a digital media store. Customer and employee records are fictitious/manual sample records and sales information is generated sample data. Do not treat it as representative production customer behavior.
+---
 
-## Custom evaluation set
+## Directory Structure
 
-`evaluation/chinook_eval.jsonl` contains manually written natural-language questions and executable gold SQL for the bundled Chinook database. It is for engineering evaluation and regression testing; it is not a statistically representative user study.
-
-## Spider 1.0
-
-Spider is not committed into this repository because it is much larger and has its own CC BY-SA 4.0 licensing/provenance. Use `python scripts/download_spider.py` after installing `gdown`, or download it from the official Yale page and place it under `data/spider/`.
-
-Never mix Spider tuning examples into the final held-out evaluation split.
+```text
+data/
+├── README.md
+│
+├── chinook/
+│   ├── Chinook_Sqlite.sql
+│   ├── Chinook_Sqlite.sqlite
+│   └── LICENSE.md
+│
+├── evaluation/
+│   └── chinook_eval.jsonl
+│
+└── spider/
+    └── .gitkeep

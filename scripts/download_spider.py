@@ -22,11 +22,13 @@ def main() -> None:
         )
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     command = ["gdown", "--id", FILE_ID, "--output", str(OUTPUT)]
-    result = subprocess.run(command, check=False)
+        result = subprocess.run(command, check=False)
+
     if result.returncode != 0:
         raise SystemExit(result.returncode)
+
     print(f"Downloaded Spider archive to {OUTPUT}")
-        print(
+    print(
         "Verify the current license and release notes on "
         "https://yale-lily.github.io/spider before use."
     )

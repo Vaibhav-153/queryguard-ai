@@ -123,7 +123,11 @@ class QueryService:
                 question=question,
                 error=f"SQL generation failed: {exc}",
                 retrieved_tables=retrieved_models,
-                latency_ms={**timings, "generation": _milliseconds(generation_start), "total": _milliseconds(request_start)},
+                latency_ms={
+                    **timings,
+                    "generation": _milliseconds(generation_start),
+                    "total": _milliseconds(request_start),
+                },
             )
         timings["generation"] = _milliseconds(generation_start)
 
@@ -223,11 +227,25 @@ class QueryService:
                         )
                 else:
                     return self._execution_error_response(
-                        question, sql, validation, retrieved_models, timings, request_start, repaired, str(exc)
+                        question,
+                        sql,
+                        validation,
+                        retrieved_models,
+                        timings,
+                        request_start,
+                        repaired,
+                        str(exc),
                     )
             else:
                 return self._execution_error_response(
-                    question, sql, validation, retrieved_models, timings, request_start, repaired, str(exc)
+                    question,
+                    sql,
+                    validation,
+                    retrieved_models,
+                    timings,
+                    request_start,
+                    repaired,
+                    str(exc),
                 )
 
         timings["total"] = _milliseconds(request_start)
@@ -263,12 +281,16 @@ class QueryService:
     ) -> tuple[str, SQLValidationResult, float] | None:
         start = time.perf_counter()
         try:
-            repaired_sql = self.generator.repair_sql(
-                question,
-                context,
-                previous_sql,
-                failure,
-            ).strip().rstrip(";")
+            repaired_sql = (
+                self.generator.repair_sql(
+                    question,
+                    context,
+                    previous_sql,
+                    failure,
+                )
+                .strip()
+                .rstrip(";")
+            )
         except Exception:
             LOGGER.exception("SQL repair failed")
             return None

@@ -13,7 +13,9 @@ class DemoSQLGenerator:
     EXAMPLES: list[tuple[tuple[str, ...], str]] = [
         (("how many", "customers"), "SELECT COUNT(*) AS customer_count FROM Customer"),
         (("total", "artists"), "SELECT COUNT(*) AS artist_count FROM Artist"),
-        (("top", "customers", "revenue"), """
+        (
+            ("top", "customers", "revenue"),
+            """
             SELECT c.CustomerId, c.FirstName || ' ' || c.LastName AS customer,
                    ROUND(SUM(i.Total), 2) AS revenue
             FROM Customer AS c
@@ -21,21 +23,31 @@ class DemoSQLGenerator:
             GROUP BY c.CustomerId, customer
             ORDER BY revenue DESC
             LIMIT 5
-        """),
-        (("revenue", "country"), """
+        """,
+        ),
+        (
+            ("revenue", "country"),
+            """
             SELECT BillingCountry AS country, ROUND(SUM(Total), 2) AS revenue
             FROM Invoice
             GROUP BY BillingCountry
             ORDER BY revenue DESC
-        """),
-        (("tracks", "genre"), """
+        """,
+        ),
+        (
+            ("tracks", "genre"),
+            """
             SELECT g.Name AS genre, COUNT(*) AS track_count
             FROM Genre AS g
             JOIN Track AS t ON t.GenreId = g.GenreId
             GROUP BY g.GenreId, g.Name
             ORDER BY track_count DESC
-        """),
-        (("average", "track", "price"), "SELECT ROUND(AVG(UnitPrice), 3) AS average_track_price FROM Track"),
+        """,
+        ),
+        (
+            ("average", "track", "price"),
+            "SELECT ROUND(AVG(UnitPrice), 3) AS average_track_price FROM Track",
+        ),
     ]
 
     @staticmethod

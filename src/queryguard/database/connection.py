@@ -59,6 +59,7 @@ def execute_read_only(
 
     try:
         with open_read_only(database_path) as connection:
+
             def progress_handler() -> int:
                 return 1 if time.perf_counter() >= deadline else 0
 
@@ -70,9 +71,7 @@ def execute_read_only(
             rows = [list(row) for row in fetched[:max_rows]]
     except sqlite3.OperationalError as exc:
         if "interrupted" in str(exc).lower():
-            raise QueryTimeoutError(
-                f"Query exceeded the {timeout_ms} ms execution limit."
-            ) from exc
+            raise QueryTimeoutError(f"Query exceeded the {timeout_ms} ms execution limit.") from exc
         raise DatabaseError(f"SQLite execution failed: {exc}") from exc
     except sqlite3.DatabaseError as exc:
         raise DatabaseError(f"SQLite database error: {exc}") from exc

@@ -31,13 +31,11 @@ class TableSchema:
 
     def as_prompt_text(self) -> str:
         columns = ", ".join(
-            f"{column.name} {column.data_type}"
-            + (" PRIMARY KEY" if column.primary_key else "")
+            f"{column.name} {column.data_type}" + (" PRIMARY KEY" if column.primary_key else "")
             for column in self.columns
         )
         foreign_keys = "; ".join(
-            f"{fk.from_column} -> {fk.target_table}.{fk.target_column}"
-            for fk in self.foreign_keys
+            f"{fk.from_column} -> {fk.target_table}.{fk.target_column}" for fk in self.foreign_keys
         )
         if foreign_keys:
             return f"TABLE {self.name}({columns}) | FOREIGN KEYS: {foreign_keys}"
@@ -61,12 +59,8 @@ def extract_schema(database_path: Path) -> list[TableSchema]:
         for table_row in table_rows:
             table_name = str(table_row["name"])
             escaped = table_name.replace("'", "''")
-            column_rows = connection.execute(
-                f"PRAGMA table_info('{escaped}')"
-            ).fetchall()
-            fk_rows = connection.execute(
-                f"PRAGMA foreign_key_list('{escaped}')"
-            ).fetchall()
+            column_rows = connection.execute(f"PRAGMA table_info('{escaped}')").fetchall()
+            fk_rows = connection.execute(f"PRAGMA foreign_key_list('{escaped}')").fetchall()
 
             columns = tuple(
                 ColumnSchema(

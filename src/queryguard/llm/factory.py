@@ -10,9 +10,7 @@ from queryguard.llm.ollama import OllamaSQLGenerator
 
 def _secret_value(secret, provider: str, variable_name: str) -> str:
     if secret is None or not secret.get_secret_value().strip():
-        raise ValueError(
-            f"{variable_name} is required when QUERYGUARD_LLM_PROVIDER={provider}."
-        )
+        raise ValueError(f"{variable_name} is required when QUERYGUARD_LLM_PROVIDER={provider}.")
     return secret.get_secret_value()
 
 

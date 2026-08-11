@@ -50,7 +50,9 @@ def _node_name(node: exp.Expression) -> str:
     return type(node).__name__
 
 
-def validate_sql(sql: str, allowed_tables: set[str], dialect: str = "sqlite") -> SQLValidationResult:
+def validate_sql(
+    sql: str, allowed_tables: set[str], dialect: str = "sqlite"
+) -> SQLValidationResult:
     """Parse SQL and enforce a single read-only statement using approved tables."""
     cleaned = sql.strip()
     if not cleaned:
@@ -72,7 +74,9 @@ def validate_sql(sql: str, allowed_tables: set[str], dialect: str = "sqlite") ->
     warnings: list[str] = []
 
     if _node_name(statement) not in ALLOWED_ROOT_NAMES:
-        errors.append(f"Only read-only SELECT-style queries are allowed, not {_node_name(statement)}.")
+        errors.append(
+            f"Only read-only SELECT-style queries are allowed, not {_node_name(statement)}."
+        )
 
     denied_seen = sorted(
         {_node_name(node) for node in statement.walk() if _node_name(node) in DENIED_NODE_NAMES}
@@ -81,9 +85,7 @@ def validate_sql(sql: str, allowed_tables: set[str], dialect: str = "sqlite") ->
         errors.append("Denied SQL operation detected: " + ", ".join(denied_seen))
 
     cte_names = {
-        cte.alias_or_name.lower()
-        for cte in statement.find_all(exp.CTE)
-        if cte.alias_or_name
+        cte.alias_or_name.lower() for cte in statement.find_all(exp.CTE) if cte.alias_or_name
     }
     tables = sorted(
         {
@@ -93,9 +95,7 @@ def validate_sql(sql: str, allowed_tables: set[str], dialect: str = "sqlite") ->
         },
         key=str.lower,
     )
-    unknown_tables = sorted(
-        table for table in tables if table.lower() not in allowed_tables
-    )
+    unknown_tables = sorted(table for table in tables if table.lower() not in allowed_tables)
     if unknown_tables:
         errors.append("Query references unapproved table(s): " + ", ".join(unknown_tables))
 

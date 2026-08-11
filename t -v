@@ -1,0 +1,415 @@
+[1mdiff --git a/app/streamlit_app.py b/app/streamlit_app.py[m
+[1mindex 57c256a..b20aa5d 100644[m
+[1m--- a/app/streamlit_app.py[m
+[1m+++ b/app/streamlit_app.py[m
+[36m@@ -54,8 +54,7 @@[m [mwith st.sidebar:[m
+         st.write(f"**Retrieval:** {health.get('retrieval_strategy', 'unknown')}")[m
+         st.write("**Database:** read-only Chinook SQLite")[m
+         st.write([m
+[31m-            "**API protection:** "[m
+[31m-            + ("enabled" if health.get("api_protected") else "disabled")[m
+[32m+[m[32m            "**API protection:** " + ("enabled" if health.get("api_protected") else "disabled")[m
+         )[m
+     else:[m
+         st.error("Backend is not reachable yet.")[m
+[36m@@ -131,7 +130,9 @@[m [mif st.button("Run governed query", type="primary", use_container_width=True):[m
+                 if validation:[m
+                     st.subheader("Governance checks")[m
+                     col1, col2, col3 = st.columns(3)[m
+[31m-                    col1.metric("Read-only policy", "Passed" if validation.get("is_safe") else "Blocked")[m
+[32m+[m[32m                    col1.metric([m
+[32m+[m[32m                        "Read-only policy", "Passed" if validation.get("is_safe") else "Blocked"[m
+[32m+[m[32m                    )[m
+                     col2.metric("Tables used", len(validation.get("tables", [])))[m
+                     col3.metric("Repair used", "Yes" if data.get("repaired") else "No")[m
+                     if validation.get("tables"):[m
+[1mdiff --git a/scripts/download_spider.py b/scripts/download_spider.py[m
+[1mindex 5419e28..7e844d7 100644[m
+[1m--- a/scripts/download_spider.py[m
+[1m+++ b/scripts/download_spider.py[m
+[36m@@ -25,11 +25,11 @@[m [mdef main() -> None:[m
+     result = subprocess.run(command, check=False)[m
+     if result.returncode != 0:[m
+         raise SystemExit(result.returncode)[m
+[31m-    print(f"Downloaded Spider archive to {OUTPUT}")[m
+[32m+[m[32m        print(f"Downloaded Spider archive to {OUTPUT}")[m
+         print([m
+[31m-        "Verify the current license and release notes on "[m
+[31m-        "https://yale-lily.github.io/spider before use."[m
+[31m-    )[m
+[32m+[m[32m            "Verify the current license and release notes on "[m
+[32m+[m[32m            "https://yale-lily.github.io/spider before use."[m
+[32m+[m[32m        )[m
+ [m
+ [m
+ if __name__ == "__main__":[m
+[1mdiff --git a/scripts/evaluate_retrieval.py b/scripts/evaluate_retrieval.py[m
+[1mindex 424872e..22878b4 100644[m
+[1m--- a/scripts/evaluate_retrieval.py[m
+[1m+++ b/scripts/evaluate_retrieval.py[m
+[36m@@ -16,7 +16,11 @@[m [mdef main() -> None:[m
+     settings = Settings()[m
+     schema = extract_schema(settings.database_path)[m
+     retriever = LexicalSchemaRetriever(build_schema_documents(schema))[m
+[31m-    examples = [json.loads(line) for line in Path("data/evaluation/chinook_eval.jsonl").read_text().splitlines() if line.strip()][m
+[32m+[m[32m    examples = [[m
+[32m+[m[32m        json.loads(line)[m
+[32m+[m[32m        for line in Path("data/evaluation/chinook_eval.jsonl").read_text().splitlines()[m
+[32m+[m[32m        if line.strip()[m
+[32m+[m[32m    ][m
+ [m
+     rows = [][m
+     for example in examples:[m
+[1mdiff --git a/scripts/run_demo_evaluation.py b/scripts/run_demo_evaluation.py[m
+[1mindex 736de85..752d496 100644[m
+[1m--- a/scripts/run_demo_evaluation.py[m
+[1m+++ b/scripts/run_demo_evaluation.py[m
+[36m@@ -5,7 +5,6 @@[m [mfrom pathlib import Path[m
+ from queryguard.config import Settings[m
+ from queryguard.evaluation.runner import run_evaluation[m
+ [m
+[31m-[m
+ if __name__ == "__main__":[m
+     settings = Settings(llm_provider="demo", retrieval_strategy="lexical")[m
+     report = run_evaluation(settings, Path("data/evaluation/chinook_eval.jsonl"), max_examples=6)[m
+[1mdiff --git a/src/queryguard/analysis/ambiguity.py b/src/queryguard/analysis/ambiguity.py[m
+[1mindex 9182775..e13d288 100644[m
+[1m--- a/src/queryguard/analysis/ambiguity.py[m
+[1m+++ b/src/queryguard/analysis/ambiguity.py[m
+[36m@@ -54,7 +54,8 @@[m [mdef detect_ambiguity(question: str) -> AmbiguityResult:[m
+         )[m
+ [m
+     if "recent" in words and not any([m
+[31m-        unit in words for unit in {"day", "days", "week", "weeks", "month", "months", "year", "years"}[m
+[32m+[m[32m        unit in words[m
+[32m+[m[32m        for unit in {"day", "days", "week", "weeks", "month", "months", "year", "years"}[m
+     ):[m
+         return AmbiguityResult([m
+             ambiguous=True,[m
+[1mdiff --git a/src/queryguard/database/connection.py b/src/queryguard/database/connection.py[m
+[1mindex 95fea68..82b9c46 100644[m
+[1m--- a/src/queryguard/database/connection.py[m
+[1m+++ b/src/queryguard/database/connection.py[m
+[36m@@ -59,6 +59,7 @@[m [mdef execute_read_only([m
+ [m
+     try:[m
+         with open_read_only(database_path) as connection:[m
+[32m+[m
+             def progress_handler() -> int:[m
+                 return 1 if time.perf_counter() >= deadline else 0[m
+ [m
+[36m@@ -70,9 +71,7 @@[m [mdef execute_read_only([m
+             rows = [list(row) for row in fetched[:max_rows]][m
+     except sqlite3.OperationalError as exc:[m
+         if "interrupted" in str(exc).lower():[m
+[31m-            raise QueryTimeoutError([m
+[31m-                f"Query exceeded the {timeout_ms} ms execution limit."[m
+[31m-            ) from exc[m
+[32m+[m[32m            raise QueryTimeoutError(f"Query exceeded the {timeout_ms} ms execution limit.") from exc[m
+         raise DatabaseError(f"SQLite execution failed: {exc}") from exc[m
+     except sqlite3.DatabaseError as exc:[m
+         raise DatabaseError(f"SQLite database error: {exc}") from exc[m
+[1mdiff --git a/src/queryguard/database/schema.py b/src/queryguard/database/schema.py[m
+[1mindex 6d035d5..64654c8 100644[m
+[1m--- a/src/queryguard/database/schema.py[m
+[1m+++ b/src/queryguard/database/schema.py[m
+[36m@@ -31,13 +31,11 @@[m [mclass TableSchema:[m
+ [m
+     def as_prompt_text(self) -> str:[m
+         columns = ", ".join([m
+[31m-            f"{column.name} {column.data_type}"[m
+[31m-            + (" PRIMARY KEY" if column.primary_key else "")[m
+[32m+[m[32m            f"{column.name} {column.data_type}" + (" PRIMARY KEY" if column.primary_key else "")[m
+             for column in self.columns[m
+         )[m
+         foreign_keys = "; ".join([m
+[31m-            f"{fk.from_column} -> {fk.target_table}.{fk.target_column}"[m
+[31m-            for fk in self.foreign_keys[m
+[32m+[m[32m            f"{fk.from_column} -> {fk.target_table}.{fk.target_column}" for fk in self.foreign_keys[m
+         )[m
+         if foreign_keys:[m
+             return f"TABLE {self.name}({columns}) | FOREIGN KEYS: {foreign_keys}"[m
+[36m@@ -61,12 +59,8 @@[m [mdef extract_schema(database_path: Path) -> list[TableSchema]:[m
+         for table_row in table_rows:[m
+             table_name = str(table_row["name"])[m
+             escaped = table_name.replace("'", "''")[m
+[31m-            column_rows = connection.execute([m
+[31m-                f"PRAGMA table_info('{escaped}')"[m
+[31m-            ).fetchall()[m
+[31m-            fk_rows = connection.execute([m
+[31m-                f"PRAGMA foreign_key_list('{escaped}')"[m
+[31m-            ).fetchall()[m
+[32m+[m[32m            column_rows = connection.execute(f"PRAGMA table_info('{escaped}')").fetchall()[m
+[32m+[m[32m            fk_rows = connection.execute(f"PRAGMA foreign_key_list('{escaped}')").fetchall()[m
+ [m
+             columns = tuple([m
+                 ColumnSchema([m
+[1mdiff --git a/src/queryguard/evaluation/metrics.py b/src/queryguard/evaluation/metrics.py[m
+[1mindex 3b5c1ec..ef0805d 100644[m
+[1m--- a/src/queryguard/evaluation/metrics.py[m
+[1m+++ b/src/queryguard/evaluation/metrics.py[m
+[36m@@ -27,7 +27,9 @@[m [mdef result_match([m
+ ) -> bool:[m
+     if [name.lower() for name in generated_columns] != [name.lower() for name in gold_columns]:[m
+         return False[m
+[31m-    return normalize_rows(generated_rows, order_sensitive) == normalize_rows(gold_rows, order_sensitive)[m
+[32m+[m[32m    return normalize_rows(generated_rows, order_sensitive) == normalize_rows([m
+[32m+[m[32m        gold_rows, order_sensitive[m
+[32m+[m[32m    )[m
+ [m
+ [m
+ def table_recall_at_k(retrieved: list[str], required: list[str], k: int) -> float:[m
+[1mdiff --git a/src/queryguard/evaluation/runner.py b/src/queryguard/evaluation/runner.py[m
+[1mindex 5c59b2e..83ea68c 100644[m
+[1m--- a/src/queryguard/evaluation/runner.py[m
+[1m+++ b/src/queryguard/evaluation/runner.py[m
+[36m@@ -69,7 +69,9 @@[m [mdef run_evaluation(settings: Settings, dataset_path: Path, max_examples: int | N[m
+     latencies = [float(record["total_latency_ms"]) for record in records][m
+     summary = {[m
+         "examples": len(records),[m
+[31m-        "successful_execution_rate": mean([1.0 if r["status"] == "success" else 0.0 for r in records]),[m
+[32m+[m[32m        "successful_execution_rate": mean([m
+[32m+[m[32m            [1.0 if r["status"] == "success" else 0.0 for r in records][m
+[32m+[m[32m        ),[m
+         "execution_match_rate": mean([1.0 if r["execution_match"] else 0.0 for r in records]),[m
+         "table_recall_at_3": mean([float(r["table_recall_at_3"]) for r in records]),[m
+         "table_recall_at_5": mean([float(r["table_recall_at_5"]) for r in records]),[m
+[1mdiff --git a/src/queryguard/governance/validator.py b/src/queryguard/governance/validator.py[m
+[1mindex d381bb5..f7afee2 100644[m
+[1m--- a/src/queryguard/governance/validator.py[m
+[1m+++ b/src/queryguard/governance/validator.py[m
+[36m@@ -50,7 +50,9 @@[m [mdef _node_name(node: exp.Expression) -> str:[m
+     return type(node).__name__[m
+ [m
+ [m
+[31m-def validate_sql(sql: str, allowed_tables: set[str], dialect: str = "sqlite") -> SQLValidationResult:[m
+[32m+[m[32mdef validate_sql([m
+[32m+[m[32m    sql: str, allowed_tables: set[str], dialect: str = "sqlite"[m
+[32m+[m[32m) -> SQLValidationResult:[m
+     """Parse SQL and enforce a single read-only statement using approved tables."""[m
+     cleaned = sql.strip()[m
+     if not cleaned:[m
+[36m@@ -72,7 +74,9 @@[m [mdef validate_sql(sql: str, allowed_tables: set[str], dialect: str = "sqlite") ->[m
+     warnings: list[str] = [][m
+ [m
+     if _node_name(statement) not in ALLOWED_ROOT_NAMES:[m
+[31m-        errors.append(f"Only read-only SELECT-style queries are allowed, not {_node_name(statement)}.")[m
+[32m+[m[32m        errors.append([m
+[32m+[m[32m            f"Only read-only SELECT-style queries are allowed, not {_node_name(statement)}."[m
+[32m+[m[32m        )[m
+ [m
+     denied_seen = sorted([m
+         {_node_name(node) for node in statement.walk() if _node_name(node) in DENIED_NODE_NAMES}[m
+[36m@@ -81,9 +85,7 @@[m [mdef validate_sql(sql: str, allowed_tables: set[str], dialect: str = "sqlite") ->[m
+         errors.append("Denied SQL operation detected: " + ", ".join(denied_seen))[m
+ [m
+     cte_names = {[m
+[31m-        cte.alias_or_name.lower()[m
+[31m-        for cte in statement.find_all(exp.CTE)[m
+[31m-        if cte.alias_or_name[m
+[32m+[m[32m        cte.alias_or_name.lower() for cte in statement.find_all(exp.CTE) if cte.alias_or_name[m
+     }[m
+     tables = sorted([m
+         {[m
+[36m@@ -93,9 +95,7 @@[m [mdef validate_sql(sql: str, allowed_tables: set[str], dialect: str = "sqlite") ->[m
+         },[m
+         key=str.lower,[m
+     )[m
+[31m-    unknown_tables = sorted([m
+[31m-        table for table in tables if table.lower() not in allowed_tables[m
+[31m-    )[m
+[32m+[m[32m    unknown_tables = sorted(table for table in tables if table.lower() not in allowed_tables)[m
+     if unknown_tables:[m
+         errors.append("Query references unapproved table(s): " + ", ".join(unknown_tables))[m
+ [m
+[1mdiff --git a/src/queryguard/llm/demo.py b/src/queryguard/llm/demo.py[m
+[1mindex 394981d..442a8c3 100644[m
+[1m--- a/src/queryguard/llm/demo.py[m
+[1m+++ b/src/queryguard/llm/demo.py[m
+[36m@@ -13,7 +13,9 @@[m [mclass DemoSQLGenerator:[m
+     EXAMPLES: list[tuple[tuple[str, ...], str]] = [[m
+         (("how many", "customers"), "SELECT COUNT(*) AS customer_count FROM Customer"),[m
+         (("total", "artists"), "SELECT COUNT(*) AS artist_count FROM Artist"),[m
+[31m-        (("top", "customers", "revenue"), """[m
+[32m+[m[32m        ([m
+[32m+[m[32m            ("top", "customers", "revenue"),[m
+[32m+[m[32m            """[m
+             SELECT c.CustomerId, c.FirstName || ' ' || c.LastName AS customer,[m
+                    ROUND(SUM(i.Total), 2) AS revenue[m
+             FROM Customer AS c[m
+[36m@@ -21,21 +23,31 @@[m [mclass DemoSQLGenerator:[m
+             GROUP BY c.CustomerId, customer[m
+             ORDER BY revenue DESC[m
+             LIMIT 5[m
+[31m-        """),[m
+[31m-        (("revenue", "country"), """[m
+[32m+[m[32m        """,[m
+[32m+[m[32m        ),[m
+[32m+[m[32m        ([m
+[32m+[m[32m            ("revenue", "country"),[m
+[32m+[m[32m            """[m
+             SELECT BillingCountry AS country, ROUND(SUM(Total), 2) AS revenue[m
+             FROM Invoice[m
+             GROUP BY BillingCountry[m
+             ORDER BY revenue DESC[m
+[31m-        """),[m
+[31m-        (("tracks", "genre"), """[m
+[32m+[m[32m        """,[m
+[32m+[m[32m        ),[m
+[32m+[m[32m        ([m
+[32m+[m[32m            ("tracks", "genre"),[m
+[32m+[m[32m            """[m
+             SELECT g.Name AS genre, COUNT(*) AS track_count[m
+             FROM Genre AS g[m
+             JOIN Track AS t ON t.GenreId = g.GenreId[m
+             GROUP BY g.GenreId, g.Name[m
+             ORDER BY track_count DESC[m
+[31m-        """),[m
+[31m-        (("average", "track", "price"), "SELECT ROUND(AVG(UnitPrice), 3) AS average_track_price FROM Track"),[m
+[32m+[m[32m        """,[m
+[32m+[m[32m        ),[m
+[32m+[m[32m        ([m
+[32m+[m[32m            ("average", "track", "price"),[m
+[32m+[m[32m            "SELECT ROUND(AVG(UnitPrice), 3) AS average_track_price FROM Track",[m
+[32m+[m[32m        ),[m
+     ][m
+ [m
+     @staticmethod[m
+[1mdiff --git a/src/queryguard/llm/factory.py b/src/queryguard/llm/factory.py[m
+[1mindex 03dfb05..88d2ed8 100644[m
+[1m--- a/src/queryguard/llm/factory.py[m
+[1m+++ b/src/queryguard/llm/factory.py[m
+[36m@@ -10,9 +10,7 @@[m [mfrom queryguard.llm.ollama import OllamaSQLGenerator[m
+ [m
+ def _secret_value(secret, provider: str, variable_name: str) -> str:[m
+     if secret is None or not secret.get_secret_value().strip():[m
+[31m-        raise ValueError([m
+[31m-            f"{variable_name} is required when QUERYGUARD_LLM_PROVIDER={provider}."[m
+[31m-        )[m
+[32m+[m[32m        raise ValueError(f"{variable_name} is required when QUERYGUARD_LLM_PROVIDER={provider}.")[m
+     return secret.get_secret_value()[m
+ [m
+ [m
+[1mdiff --git a/src/queryguard/services/query_service.py b/src/queryguard/services/query_service.py[m
+[1mindex 58e2426..e7c9fc8 100644[m
+[1m--- a/src/queryguard/services/query_service.py[m
+[1m+++ b/src/queryguard/services/query_service.py[m
+[36m@@ -123,7 +123,11 @@[m [mclass QueryService:[m
+                 question=question,[m
+                 error=f"SQL generation failed: {exc}",[m
+                 retrieved_tables=retrieved_models,[m
+[31m-                latency_ms={**timings, "generation": _milliseconds(generation_start), "total": _milliseconds(request_start)},[m
+[32m+[m[32m                latency_ms={[m
+[32m+[m[32m                    **timings,[m
+[32m+[m[32m                    "generation": _milliseconds(generation_start),[m
+[32m+[m[32m                    "total": _milliseconds(request_start),[m
+[32m+[m[32m                },[m
+             )[m
+         timings["generation"] = _milliseconds(generation_start)[m
+ [m
+[36m@@ -223,11 +227,25 @@[m [mclass QueryService:[m
+                         )[m
+                 else:[m
+                     return self._execution_error_response([m
+[31m-                        question, sql, validation, retrieved_models, timings, request_start, repaired, str(exc)[m
+[32m+[m[32m                        question,[m
+[32m+[m[32m                        sql,[m
+[32m+[m[32m                        validation,[m
+[32m+[m[32m                        retrieved_models,[m
+[32m+[m[32m                        timings,[m
+[32m+[m[32m                        request_start,[m
+[32m+[m[32m                        repaired,[m
+[32m+[m[32m                        str(exc),[m
+                     )[m
+             else:[m
+                 return self._execution_error_response([m
+[31m-                    question, sql, validation, retrieved_models, timings, request_start, repaired, str(exc)[m
+[32m+[m[32m                    question,[m
+[32m+[m[32m                    sql,[m
+[32m+[m[32m                    validation,[m
+[32m+[m[32m                    retrieved_models,[m
+[32m+[m[32m                    timings,[m
+[32m+[m[32m                    request_start,[m
+[32m+[m[32m                    repaired,[m
+[32m+[m[32m                    str(exc),[m
+                 )[m
+ [m
+         timings["total"] = _milliseconds(request_start)[m
+[36m@@ -263,12 +281,16 @@[m [mclass QueryService:[m
+     ) -> tuple[str, SQLValidationResult, float] | None:[m
+         start = time.perf_counter()[m
+         try:[m
+[31m-            repaired_sql = self.generator.repair_sql([m
+[31m-                question,[m
+[31m-                context,[m
+[31m-                previous_sql,[m
+[31m-                failure,[m
+[31m-            ).strip().rstrip(";")[m
+[32m+[m[32m            repaired_sql = ([m
+[32m+[m[32m                self.generator.repair_sql([m
+[32m+[m[32m                    question,[m
+[32m+[m[32m                    context,[m
+[32m+[m[32m                    previous_sql,[m
+[32m+[m[32m                    failure,[m
+[32m+[m[32m                )[m
+[32m+[m[32m                .strip()[m
+[32m+[m[32m                .rstrip(";")[m
+[32m+[m[32m            )[m
+         except Exception:[m
+             LOGGER.exception("SQL repair failed")[m
+             return None[m
+[1mdiff --git a/tests/security/test_validator.py b/tests/security/test_validator.py[m
+[1mindex 3cebb92..c04f3aa 100644[m
+[1m--- a/tests/security/test_validator.py[m
+[1m+++ b/tests/security/test_validator.py[m
+[36m@@ -4,6 +4,7 @@[m [mfrom queryguard.governance.validator import validate_sql[m
+ [m
+ ALLOWED = {"customer", "invoice", "track", "artist", "genre"}[m
+ [m
+[32m+[m
+ @pytest.mark.parametrize([m
+     "sql",[m
+     [[m
+[1mdiff --git a/tests/unit/test_cloud_llms.py b/tests/unit/test_cloud_llms.py[m
+[1mindex cb18dbb..2e68651 100644[m
+[1m--- a/tests/unit/test_cloud_llms.py[m
+[1m+++ b/tests/unit/test_cloud_llms.py[m
+[36m@@ -37,9 +37,7 @@[m [mdef test_gemini_extracts_sql(monkeypatch):[m
+                 "candidates": [[m
+                     {[m
+                         "content": {[m
+[31m-                            "parts": [[m
+[31m-                                {"text": "```sql\nSELECT COUNT(*) FROM Customer;\n```"}[m
+[31m-                            ][m
+[32m+[m[32m                            "parts": [{"text": "```sql\nSELECT COUNT(*) FROM Customer;\n```"}][m
+                         }[m
+                     }[m
+                 ][m
+[36m@@ -57,11 +55,7 @@[m [mdef test_groq_extracts_sql(monkeypatch):[m
+     def fake_post(*args, **kwargs):[m
+         assert kwargs["headers"]["Authorization"] == "Bearer test-key"[m
+         return FakeResponse([m
+[31m-            {[m
+[31m-                "choices": [[m
+[31m-                    {"message": {"content": "Here is SQL: SELECT Name FROM Artist;"}}[m
+[31m-                ][m
+[31m-            }[m
+[32m+[m[32m            {"choices": [{"message": {"content": "Here is SQL: SELECT Name FROM Artist;"}}]}[m
+         )[m
+ [m
+     monkeypatch.setattr(httpx, "post", fake_post)[m
+[1mdiff --git a/tests/unit/test_retrieval.py b/tests/unit/test_retrieval.py[m
+[1mindex 806962b..f570d99 100644[m
+[1m--- a/tests/unit/test_retrieval.py[m
+[1m+++ b/tests/unit/test_retrieval.py[m
+[36m@@ -5,7 +5,9 @@[m [mfrom queryguard.schema.documents import SchemaDocument[m
+ def test_lexical_retrieval_finds_customer_and_invoice_for_revenue():[m
+     docs = [[m
+         SchemaDocument("Customer", "Table Customer. Columns: CustomerId, FirstName, LastName."),[m
+[31m-        SchemaDocument("Invoice", "Table Invoice. Columns: InvoiceId, CustomerId, Total, BillingCountry."),[m
+[32m+[m[32m        SchemaDocument([m
+[32m+[m[32m            "Invoice", "Table Invoice. Columns: InvoiceId, CustomerId, Total, BillingCountry."[m
+[32m+[m[32m        ),[m
+         SchemaDocument("Track", "Table Track. Columns: TrackId, Name, UnitPrice."),[m
+     ][m
+     retriever = LexicalSchemaRetriever(docs)[m

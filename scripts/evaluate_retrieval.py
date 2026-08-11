@@ -16,7 +16,11 @@ def main() -> None:
     settings = Settings()
     schema = extract_schema(settings.database_path)
     retriever = LexicalSchemaRetriever(build_schema_documents(schema))
-    examples = [json.loads(line) for line in Path("data/evaluation/chinook_eval.jsonl").read_text().splitlines() if line.strip()]
+    examples = [
+        json.loads(line)
+        for line in Path("data/evaluation/chinook_eval.jsonl").read_text().splitlines()
+        if line.strip()
+    ]
 
     rows = []
     for example in examples:

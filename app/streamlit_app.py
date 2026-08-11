@@ -54,8 +54,7 @@ with st.sidebar:
         st.write(f"**Retrieval:** {health.get('retrieval_strategy', 'unknown')}")
         st.write("**Database:** read-only Chinook SQLite")
         st.write(
-            "**API protection:** "
-            + ("enabled" if health.get("api_protected") else "disabled")
+            "**API protection:** " + ("enabled" if health.get("api_protected") else "disabled")
         )
     else:
         st.error("Backend is not reachable yet.")
@@ -131,7 +130,9 @@ if st.button("Run governed query", type="primary", use_container_width=True):
                 if validation:
                     st.subheader("Governance checks")
                     col1, col2, col3 = st.columns(3)
-                    col1.metric("Read-only policy", "Passed" if validation.get("is_safe") else "Blocked")
+                    col1.metric(
+                        "Read-only policy", "Passed" if validation.get("is_safe") else "Blocked"
+                    )
                     col2.metric("Tables used", len(validation.get("tables", [])))
                     col3.metric("Repair used", "Yes" if data.get("repaired") else "No")
                     if validation.get("tables"):

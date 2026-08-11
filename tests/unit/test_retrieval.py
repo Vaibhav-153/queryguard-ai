@@ -5,7 +5,9 @@ from queryguard.schema.documents import SchemaDocument
 def test_lexical_retrieval_finds_customer_and_invoice_for_revenue():
     docs = [
         SchemaDocument("Customer", "Table Customer. Columns: CustomerId, FirstName, LastName."),
-        SchemaDocument("Invoice", "Table Invoice. Columns: InvoiceId, CustomerId, Total, BillingCountry."),
+        SchemaDocument(
+            "Invoice", "Table Invoice. Columns: InvoiceId, CustomerId, Total, BillingCountry."
+        ),
         SchemaDocument("Track", "Table Track. Columns: TrackId, Name, UnitPrice."),
     ]
     retriever = LexicalSchemaRetriever(docs)
