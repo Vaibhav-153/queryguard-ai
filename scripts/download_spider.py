@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
 FILE_ID = "1403EGqzIDoHMdQF4c9Bkyl7dZLZ5Wt6J"
