@@ -1,34 +1,47 @@
 services:
   - type: web
     name: queryguard-api
-    runtime: python
+    runtime: docker
     plan: free
-    buildCommand: pip install -e .
-    startCommand: uvicorn queryguard.api.main:app --host 0.0.0.0 --port $PORT
+
+    dockerfilePath: ./Dockerfile
+
     healthCheckPath: /health
     autoDeploy: true
+
     envVars:
       - key: QUERYGUARD_ENVIRONMENT
         value: production
+
       - key: QUERYGUARD_LLM_PROVIDER
         value: gemini
+
       - key: QUERYGUARD_GEMINI_MODEL
         value: gemini-3.5-flash
+
       - key: QUERYGUARD_RETRIEVAL_STRATEGY
         value: lexical
+
       - key: QUERYGUARD_DATABASE_PATH
         value: data/chinook/Chinook_Sqlite.sqlite
+
       - key: QUERYGUARD_WORKSPACE_ROOT
         value: /tmp/queryguard-workspaces
+
       - key: QUERYGUARD_MAX_UPLOAD_MB
         value: "25"
+
       - key: QUERYGUARD_MAX_TOTAL_UPLOAD_MB
         value: "50"
+
       - key: QUERYGUARD_MAX_UPLOAD_FILES
         value: "8"
+
       - key: QUERYGUARD_WORKSPACE_TTL_MINUTES
         value: "60"
+
       - key: QUERYGUARD_GEMINI_API_KEY
         sync: false
+
       - key: QUERYGUARD_API_ACCESS_KEY
         sync: false
