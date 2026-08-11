@@ -1,13 +1,8 @@
-import pytest
-from pydantic import SecretStr
-
-pytest.importorskip("sqlglot")
-
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from queryguard.api.main import create_app
 from queryguard.config import Settings
-
 
 def test_health_and_query_with_demo_provider(database_path):
     settings = Settings(
