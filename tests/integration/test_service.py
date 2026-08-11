@@ -1,10 +1,5 @@
-import pytest
-
-pytest.importorskip("sqlglot")
-
 from queryguard.config import Settings
 from queryguard.services.query_service import QueryService
-
 
 def test_demo_service_executes_full_pipeline(database_path):
     service = QueryService(
