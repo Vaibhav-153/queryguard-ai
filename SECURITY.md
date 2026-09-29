@@ -1,51 +1,25 @@
-# Security Policy and Portfolio Boundary
+# Security
 
-QueryGuard AI is a personal/portfolio analytics prototype. Its controls are real engineering controls, but they are **not** a claim of enterprise certification or a safe place for confidential production data.
+QueryGuard treats generated SQL and uploaded files as untrusted input.
 
-## Implemented controls
+## Controls in this repository
 
-- SQLGlot AST inspection before generated SQL is executed.
-- Single read-only SELECT-style statement policy.
-- Active-database table allowlist.
-- SQLite `mode=ro` plus `PRAGMA query_only=ON` during analytical execution.
-- Query timeout and result-row cap.
-- Security-policy failures are not sent through the automatic repair path.
-- Random 32-character workspace identifiers.
-- User filenames are reduced to safe basenames; request paths cannot select arbitrary server files.
-- File-extension allowlists.
-- Per-file, combined-upload, and file-count limits.
-- Office ZIP member/uncompressed-size limits.
-- Uploaded SQLite integrity validation.
-- Temporary workspaces expire and are excluded from Git.
-- Real `.env` and Streamlit secret files are excluded from Git.
-- Optional shared `X-QueryGuard-Key` between the hosted UI and API.
-- Document prompts explicitly treat uploaded text as untrusted evidence rather than instructions.
-- CSV/XLSX downloads escape formula-like text before spreadsheet export.
+- Generated SQL is parsed and restricted to a single read-only SELECT-style statement.
+- Referenced database tables must exist in the discovered schema.
+- SQLite query execution uses a read-only connection and `PRAGMA query_only = ON`.
+- Query time and returned row count are limited.
+- Upload count, per-file size, combined size and Office archive expansion are limited.
+- Runtime workspaces expire and are excluded from version control.
+- Excel exports prefix formula-like text to reduce spreadsheet formula injection risk.
+- API keys are read from environment variables and are not stored in source code.
+- An optional API access key can protect query and upload endpoints.
 
-## Important limitations
+## Deployment guidance
 
-The project does not implement enterprise user identity, row/column-level authorization, malware scanning, a WAF, tenant-grade storage isolation, durable audit logging, KMS-managed encryption, legal-retention controls, or per-user rate limiting.
+A public demo should use non-sensitive data. Files are temporarily stored on the service filesystem while a workspace is active, so this project should not be used as-is for confidential or regulated data.
 
-The shared UI/API key is only an app-to-app preview control. It does not identify individual users.
+Use HTTPS at the hosting layer, configure `QUERYGUARD_API_ACCESS_KEY`, restrict service access where possible, and use a dedicated secret manager for model API credentials.
 
-OCR and document parsers may process malformed or adversarial files differently across library versions. File limits reduce risk but are not a substitute for a production file-scanning service.
+## Reporting a vulnerability
 
-Generated SQL can be structurally safe and still answer the wrong business question. Important decisions require review of the generated SQL, evidence, and business definitions.
-
-## Secrets
-
-Never commit or paste these values into source files:
-
-```text
-QUERYGUARD_GEMINI_API_KEY
-QUERYGUARD_GROQ_API_KEY
-QUERYGUARD_API_ACCESS_KEY
-```
-
-Use `.env` locally, Render environment variables for the API, and Streamlit Community Cloud secrets for the frontend.
-
-## Public demo data
-
-The hosted portfolio version should use Chinook or other public/non-sensitive files. Before sending private material to a hosted LLM provider, review the provider's current privacy/data-use terms and your organization's policy.
-
-For the detailed threat model and mitigations, see [`docs/SECURITY.md`](docs/SECURITY.md).
+Please open a private security report through GitHub Security Advisories rather than posting credentials or exploit details in a public issue.

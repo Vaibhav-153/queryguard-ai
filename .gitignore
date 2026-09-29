@@ -1,37 +1,26 @@
 # Python
 __pycache__/
 *.py[cod]
-*.so
 .pytest_cache/
+.ruff_cache/
 .coverage
 htmlcov/
-.ruff_cache/
-
-# Environments and secrets
+*.egg-info/
+build/
+dist/
 .venv/
 venv/
+
+# Environment and secrets
 .env
 .streamlit/secrets.toml
 
-# IDE / OS
-.vscode/
-.idea/
+# Runtime workspaces
+queryguard-workspaces/
+data/workspaces/
+
+# Local files
 .DS_Store
 Thumbs.db
-
-# Runtime files
-data/workspaces/*
-!data/workspaces/.gitkeep
-
-# Optional downloaded benchmark
-data/spider/*
-!data/spider/.gitkeep
-
-# User uploads and generated exports
-*.tmp
-*.temp
-# Packaging artifacts
-build/
-dist/
-*.egg-info/
-
+.vscode/
+.idea/

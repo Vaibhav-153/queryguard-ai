@@ -1,169 +1,73 @@
 # Architecture
 
-## Design goal
+QueryGuard AI keeps the LLM away from direct database access. Model output is treated as untrusted text until it passes the SQL validator.
 
-QueryGuard has one frontend and one backend, but it uses **different deterministic pipelines for different source types**. This avoids the weak design of sending every uploaded file directly to an LLM.
-
-## System overview
-
-```mermaid
-flowchart TD
-    U[User] --> UI[Streamlit UI]
-    UI --> API[FastAPI]
-    API --> WM[Workspace Manager]
-
-    WM --> S[Structured Pipeline]
-    WM --> D[Document Pipeline]
-    WM --> I[Invoice Pipeline]
-
-    S --> LLM[Configured LLM]
-    D --> LLM
-    I --> S
-    I --> D
-
-    S --> DB[(Read-only SQLite)]
-    API --> LOG[Structured Logs]
-```
-
-## Structured pipeline
-
-Used by the Chinook demo, uploaded SQLite, Excel, CSV, and normalized invoices.
-
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant A as FastAPI
-    participant R as Schema Retriever
-    participant L as LLM
-    participant V as SQLGlot Validator
-    participant D as SQLite
-
-    U->>A: Natural-language question
-    A->>R: Search active schema
-    R-->>A: Top-K tables
-    A->>L: Question + selected schema
-    L-->>A: SQL candidate
-    A->>V: Parse AST + enforce policy
-    alt unsafe
-        V-->>A: Rejected
-        A-->>U: Controlled error
-    else safe
-        V-->>A: Approved tables
-        A->>D: Read-only execution
-        D-->>A: Rows
-        A-->>U: SQL + result + evidence + latency
-    end
-```
-
-## Spreadsheet ingestion
-
-```mermaid
-flowchart LR
-    X[XLSX / CSV] --> V[Validate type / archive]
-    V --> P[pandas / openpyxl]
-    P --> T[Sanitize sheet + column names]
-    T --> Q[(Temporary SQLite)]
-    Q --> S[Normal Structured Pipeline]
-```
-
-Excel is converted rather than creating a second analytics engine. This keeps SQL governance and evaluation reusable.
-
-## Document pipeline
-
-```mermaid
-flowchart LR
-    F[PDF/DOCX/PPTX] --> P[Parser]
-    P --> U[Source-aware Units]
-    U --> C[Chunks]
-    C --> R[Lexical/Semantic Retrieval]
-    R --> E[Top-K Evidence]
-    E --> L[LLM]
-    L --> A[Grounded Answer]
-    E --> CITE[Page/Section/Slide Sources]
-```
-
-Document text is explicitly treated as **untrusted data** in the system prompt. Instructions embedded inside a PDF should not override the application instruction.
-
-## Invoice pipeline
-
-```mermaid
-flowchart TD
-    F[Invoice files] --> P{File type}
-    P -->|PDF/Image| X[Text extraction / optional OCR]
-    P -->|XLSX/CSV| R[Structured row mapping]
-    X --> H[Conservative field parser]
-    H --> N[Normalized invoice records]
-    R --> N
-    N --> DB[(Invoices SQLite)]
-    X --> C[Document chunks]
-    DB --> SQL[Text-to-SQL analytics]
-    C --> QA[Evidence Q&A]
-```
-
-This is intentionally hybrid: numerical aggregation is better handled by SQL, while wording such as payment terms is better handled through document evidence.
-
-## Workspace architecture
-
-Uploaded files never replace `data/chinook/Chinook_Sqlite.sqlite`.
+## Structured-data flow
 
 ```text
-data/workspaces/<random-id>/
-├── metadata.json
-├── uploads/
-├── workspace.sqlite          # spreadsheets when applicable
-├── invoices.sqlite           # invoice mode when applicable
-├── document_chunks.json      # document evidence when applicable
-└── invoice_records.json      # normalized invoice fields
+Question
+  |
+  v
+Schema extraction
+  |
+  v
+Lexical table retrieval
+  |
+  v
+LLM SQL generation
+  |
+  v
+SQLGlot validation
+  |
+  v
+Read-only SQLite execution
+  |
+  v
+Rows + validation metadata
 ```
 
-`WorkspaceManager` creates random UUID-based directories, applies upload limits, persists metadata, expires old workspaces, and never accepts an arbitrary user path.
+`queryguard.query_service.QueryService` coordinates this flow. Schema retrieval selects likely tables and also adds directly related tables when foreign keys indicate a relationship.
 
-## LLM provider architecture
+### Validation boundaries
 
-```mermaid
-flowchart LR
-    SQL[SQL Service] --> A[LLMSQLGenerator]
-    DOC[Document Service] --> P[TextLLM]
-    A --> P
-    P --> O[Ollama]
-    P --> G[Gemini]
-    P --> R[Groq]
-    SQL --> DEMO[Demo SQL Generator]
-```
+`queryguard.sql_guard` parses the generated statement and applies these rules:
 
-The provider interface is intentionally small: `complete(prompt, system_prompt, max_tokens)`. Provider-specific HTTP details stay inside `llm/`.
+- exactly one statement;
+- SELECT-style root only;
+- no DDL/DML or administrative nodes;
+- physical table references must be present in the discovered schema;
+- CTE names are not mistaken for physical tables.
 
-## Deployment
+SQLGlot is a required runtime dependency. A conservative fallback exists only so a missing dependency fails toward a narrower set of accepted SQL during troubleshooting.
 
-### Local
+`queryguard.database` then opens SQLite with `mode=ro` and `PRAGMA query_only = ON`. A progress handler interrupts queries that exceed the configured timeout, and only a configured number of rows are returned.
 
-```text
-Browser → Streamlit :8501 → FastAPI :8000 → Ollama :11434 / hosted provider
-```
+## Uploaded structured data
 
-### Hosted portfolio demo
+SQLite uploads are integrity-checked before a workspace is created. CSV and XLSX files are converted into a temporary SQLite database. Sheet and column names are normalized before insertion.
 
-```text
-Browser
-  ↓
-Streamlit Community Cloud
-  ↓ HTTPS + shared QueryGuard key
-Render FastAPI
-  ↓
-Gemini API
-```
+Workspaces have random identifiers, configured size limits, and an expiration timestamp. Runtime workspace directories are excluded from Git.
 
-Uploaded workspaces on a free hosted service are temporary. The local/Docker path is the reproducible primary path for private files.
+## Document flow
 
-## Failure handling
+PDF, DOCX and PPTX files are converted into text chunks. PDF pages with no extractable text can use OCR when `pytesseract` and Tesseract are available.
 
-- invalid upload → HTTP 400 with reason;
-- oversized upload → HTTP 413;
-- expired workspace → HTTP 404 and re-upload instruction;
-- missing provider key → HTTP 503 rather than a fake answer;
-- unsafe SQL → `blocked` response;
-- ordinary invalid SQL → one repair attempt, then error;
-- query timeout → controlled database error;
-- no document evidence → explicit unsupported answer;
-- OCR unavailable → clear dependency message;
-- invoice uncertainty → `needs_review=true` instead of guessing silently.
+The document retriever uses lexical term overlap after removing common stopwords. The answer generator receives only retrieved passages, and the API returns source filename, locator and excerpt with the answer.
+
+## Invoice flow
+
+CSV and XLSX invoices use column aliases for fields such as invoice number, date, vendor, customer, currency and total. PDF/image invoices use conservative regular-expression extraction after text extraction or OCR.
+
+Every invoice record includes `needs_review`. Extracted records are also written to a temporary SQLite table so the same governed query pipeline can be used for analysis.
+
+## Interfaces
+
+The FastAPI application is defined in `queryguard.api`. The Streamlit client in `app/streamlit_app.py` calls the API rather than importing database services directly.
+
+An optional `X-QueryGuard-Key` protects API endpoints when `QUERYGUARD_API_ACCESS_KEY` is configured.
+
+## Provider adapters
+
+The package contains small adapters for Gemini, Groq and Ollama plus a deterministic demo provider. Provider selection and model names are configured through environment variables.
+
+The demo provider exists for repeatable local tests. It recognizes the bundled example questions and otherwise returns a small table preview; it is not intended as a general natural-language SQL model.

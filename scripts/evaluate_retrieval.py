@@ -1,54 +1,54 @@
-"""Measure schema-table retrieval independently from LLM generation."""
+"""Measure lexical schema retrieval on a small transparent demo question set."""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
-from queryguard.config import Settings
-from queryguard.database.schema import extract_schema
-from queryguard.evaluation.metrics import mean, table_recall_at_k
-from queryguard.retrieval.lexical import LexicalSchemaRetriever
-from queryguard.schema.documents import build_schema_documents
+from queryguard.database import extract_schema
+from queryguard.demo import create_demo_database
+from queryguard.retrieval import LexicalSchemaRetriever
+
+
+CASES = [
+    ("Show the top customers by revenue", {"Customer", "Invoice"}),
+    ("Which countries generated the most revenue?", {"Customer", "Invoice"}),
+    ("How many customers are in the database?", {"Customer"}),
+    ("What is the average track price?", {"Track"}),
+    ("Which genres have the most tracks?", {"Track"}),
+]
+
+
+def recall_at(results: list[str], expected: set[str], k: int) -> float:
+    retrieved = set(results[:k])
+    return len(retrieved & expected) / len(expected)
 
 
 def main() -> None:
-    settings = Settings()
-    schema = extract_schema(settings.database_path)
-    retriever = LexicalSchemaRetriever(build_schema_documents(schema))
-    examples = [
-        json.loads(line)
-        for line in Path("data/evaluation/chinook_eval.jsonl").read_text().splitlines()
-        if line.strip()
-    ]
-
+    database = create_demo_database(Path("data/demo.sqlite"))
+    retriever = LexicalSchemaRetriever(extract_schema(database))
     rows = []
-    for example in examples:
-        results = retriever.search(example["question"], 5)
-        names = [result.table for result in results]
-        rows.append(
-            {
-                "id": example["id"],
-                "retrieved": names,
-                "required": example["required_tables"],
-                "recall_at_1": table_recall_at_k(names, example["required_tables"], 1),
-                "recall_at_3": table_recall_at_k(names, example["required_tables"], 3),
-                "recall_at_5": table_recall_at_k(names, example["required_tables"], 5),
-            }
-        )
-
-    report = {
-        "status": "Measured",
-        "scope": "Lexical schema retrieval only; no LLM generation was involved.",
-        "examples": len(rows),
-        "recall_at_1": mean([r["recall_at_1"] for r in rows]),
-        "recall_at_3": mean([r["recall_at_3"] for r in rows]),
-        "recall_at_5": mean([r["recall_at_5"] for r in rows]),
-        "records": rows,
+    recalls = {1: [], 3: [], 5: []}
+    for question, expected in CASES:
+        ranked = [item.table for item in retriever.search(question, 5)]
+        row = {"question": question, "expected": sorted(expected), "retrieved": ranked}
+        for k in recalls:
+            value = recall_at(ranked, expected, k)
+            row[f"recall_at_{k}"] = value
+            recalls[k].append(value)
+        rows.append(row)
+    summary = {
+        "evaluation_set": "five synthetic demo questions stored in scripts/evaluate_retrieval.py",
+        "case_count": len(CASES),
+        "mean_recall_at_1": round(sum(recalls[1]) / len(recalls[1]), 3),
+        "mean_recall_at_3": round(sum(recalls[3]) / len(recalls[3]), 3),
+        "mean_recall_at_5": round(sum(recalls[5]) / len(recalls[5]), 3),
+        "cases": rows,
     }
-    output = Path("results/lexical_retrieval_baseline.json")
-    output.write_text(json.dumps(report, indent=2), encoding="utf-8")
-    print(json.dumps({key: value for key, value in report.items() if key != "records"}, indent=2))
+    output = Path("results/retrieval_metrics.json")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    print(json.dumps(summary, indent=2))
 
 
 if __name__ == "__main__":

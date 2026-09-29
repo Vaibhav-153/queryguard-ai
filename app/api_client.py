@@ -1,4 +1,4 @@
-"""Small HTTP client used by the Streamlit frontend."""
+"""HTTP client used by the Streamlit interface."""
 
 from __future__ import annotations
 
@@ -12,103 +12,69 @@ class APIClientError(RuntimeError):
 
 
 class QueryGuardAPI:
-    def __init__(self, base_url: str, access_key: str = "") -> None:
+    def __init__(self, base_url: str, access_key: str = "", timeout: float = 90.0) -> None:
         self.base_url = base_url.rstrip("/")
-        self.access_key = access_key
+        self.timeout = timeout
+        self.headers = {"X-QueryGuard-Key": access_key} if access_key else {}
 
-    def _headers(self) -> dict[str, str]:
-        if not self.access_key:
-            return {}
-        return {"X-QueryGuard-Key": self.access_key}
-
-    def _json(self, response: httpx.Response) -> dict[str, Any]:
-        if response.status_code == 401:
-            raise APIClientError(
-                "The Streamlit and FastAPI access keys do not match. "
-                "Check QUERYGUARD_API_ACCESS_KEY on both deployments."
-            )
+    def _request(self, method: str, path: str, **kwargs: Any) -> Any:
+        headers = dict(self.headers)
+        headers.update(kwargs.pop("headers", {}))
         try:
-            response.raise_for_status()
-        except httpx.HTTPStatusError as exc:
+            response = httpx.request(
+                method,
+                f"{self.base_url}{path}",
+                headers=headers,
+                timeout=self.timeout,
+                **kwargs,
+            )
+        except httpx.HTTPError as exc:
+            raise APIClientError(f"Backend request failed: {exc}") from exc
+        if response.status_code >= 400:
             try:
                 detail = response.json().get("detail", response.text)
-            except ValueError:
+            except Exception:
                 detail = response.text
-            raise APIClientError(str(detail)) from exc
+            raise APIClientError(f"Backend returned {response.status_code}: {detail}")
+        if not response.content:
+            return None
         return response.json()
 
-    def health(self) -> dict[str, Any] | None:
+    def health(self) -> dict | None:
         try:
-            response = httpx.get(f"{self.base_url}/health", timeout=45)
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPError:
+            return self._request("GET", "/health")
+        except APIClientError:
             return None
 
-    def demo_query(self, question: str) -> dict[str, Any]:
-        response = httpx.post(
-            f"{self.base_url}/query",
-            headers=self._headers(),
-            json={"question": question},
-            timeout=180,
-        )
-        return self._json(response)
+    def demo_query(self, question: str) -> dict:
+        return self._request("POST", "/query", json={"question": question})
 
-    def upload_workspace(self, mode: str, uploaded_files) -> dict[str, Any]:
+    def upload_workspace(self, mode: str, uploaded_files: list[Any]) -> dict:
         files = [
-            (
-                "files",
-                (uploaded.name, uploaded.getvalue(), uploaded.type or "application/octet-stream"),
-            )
-            for uploaded in uploaded_files
+            ("files", (file.name, file.getvalue(), getattr(file, "type", None) or "application/octet-stream"))
+            for file in uploaded_files
         ]
-        response = httpx.post(
-            f"{self.base_url}/workspaces/upload",
-            headers=self._headers(),
-            data={"mode": mode},
-            files=files,
-            timeout=180,
-        )
-        return self._json(response)
+        return self._request("POST", "/workspaces/upload", data={"mode": mode}, files=files)
 
     def delete_workspace(self, workspace_id: str) -> None:
-        response = httpx.delete(
-            f"{self.base_url}/workspaces/{workspace_id}",
-            headers=self._headers(),
-            timeout=30,
-        )
-        self._json(response)
+        self._request("DELETE", f"/workspaces/{workspace_id}")
 
-    def workspace_schema(self, workspace_id: str) -> dict[str, Any]:
-        response = httpx.get(
-            f"{self.base_url}/workspaces/{workspace_id}/schema",
-            headers=self._headers(),
-            timeout=60,
-        )
-        return self._json(response)
+    def workspace_schema(self, workspace_id: str) -> dict:
+        return self._request("GET", f"/workspaces/{workspace_id}/schema")
 
-    def workspace_query(self, workspace_id: str, question: str) -> dict[str, Any]:
-        response = httpx.post(
-            f"{self.base_url}/workspaces/{workspace_id}/query",
-            headers=self._headers(),
+    def workspace_query(self, workspace_id: str, question: str) -> dict:
+        return self._request(
+            "POST",
+            f"/workspaces/{workspace_id}/query",
             json={"question": question},
-            timeout=180,
         )
-        return self._json(response)
 
-    def document_query(self, workspace_id: str, question: str) -> dict[str, Any]:
-        response = httpx.post(
-            f"{self.base_url}/workspaces/{workspace_id}/document-query",
-            headers=self._headers(),
+    def document_query(self, workspace_id: str, question: str) -> dict:
+        return self._request(
+            "POST",
+            f"/workspaces/{workspace_id}/document-query",
             json={"question": question},
-            timeout=180,
         )
-        return self._json(response)
 
-    def invoice_records(self, workspace_id: str) -> dict[str, Any]:
-        response = httpx.get(
-            f"{self.base_url}/workspaces/{workspace_id}/invoice-records",
-            headers=self._headers(),
-            timeout=60,
-        )
-        return self._json(response)
+    def invoice_records(self, workspace_id: str) -> dict:
+        return self._request("GET", f"/workspaces/{workspace_id}/invoice-records")

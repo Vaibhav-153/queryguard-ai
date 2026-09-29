@@ -1,4 +1,4 @@
-"""Public API request and response models."""
+"""Request and response models used by the API and UI."""
 
 from __future__ import annotations
 

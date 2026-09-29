@@ -1,0 +1,81 @@
+{
+  "evaluation_set": "five synthetic demo questions stored in scripts/evaluate_retrieval.py",
+  "case_count": 5,
+  "mean_recall_at_1": 0.8,
+  "mean_recall_at_3": 1.0,
+  "mean_recall_at_5": 1.0,
+  "cases": [
+    {
+      "question": "Show the top customers by revenue",
+      "expected": [
+        "Customer",
+        "Invoice"
+      ],
+      "retrieved": [
+        "Invoice",
+        "Customer",
+        "Track"
+      ],
+      "recall_at_1": 0.5,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0
+    },
+    {
+      "question": "Which countries generated the most revenue?",
+      "expected": [
+        "Customer",
+        "Invoice"
+      ],
+      "retrieved": [
+        "Invoice",
+        "Customer",
+        "Track"
+      ],
+      "recall_at_1": 0.5,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0
+    },
+    {
+      "question": "How many customers are in the database?",
+      "expected": [
+        "Customer"
+      ],
+      "retrieved": [
+        "Customer",
+        "Invoice",
+        "Track"
+      ],
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0
+    },
+    {
+      "question": "What is the average track price?",
+      "expected": [
+        "Track"
+      ],
+      "retrieved": [
+        "Track",
+        "Customer",
+        "Invoice"
+      ],
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0
+    },
+    {
+      "question": "Which genres have the most tracks?",
+      "expected": [
+        "Track"
+      ],
+      "retrieved": [
+        "Track",
+        "Customer",
+        "Invoice"
+      ],
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0
+    }
+  ]
+}

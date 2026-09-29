@@ -1,329 +1,172 @@
 # QueryGuard AI
 
-**Governed Data & Document Intelligence Platform**
+QueryGuard AI is a Python application for asking natural-language questions over local structured data and documents. For database questions it retrieves relevant schema, generates one SQLite query, validates the SQL, and executes it through a read-only connection. It also supports spreadsheet uploads, cited document questions, and basic invoice extraction.
 
-QueryGuard AI is a portfolio project that combines **governed Text-to-SQL**, **evidence-grounded document question answering**, and **invoice analytics** in one understandable Python application.
+The repository includes a deterministic demo provider, so the main pipeline can be tested without an API key.
 
-It keeps the original Chinook Text-to-SQL demo, but also lets a user temporarily upload their own SQLite database, Excel/CSV data, PDF/DOCX/PPTX documents, or invoices.
+## What it does
 
-> Portfolio scope: this is a personal/local analytics prototype, not an enterprise data-governance product. The public demo should use public or non-sensitive files only.
+- **Text-to-SQL:** ask questions over SQLite databases.
+- **Spreadsheet analysis:** convert CSV or Excel sheets to a temporary SQLite workspace before querying.
+- **Document Q&A:** extract text from PDF, DOCX, and PPTX files and return answers with retrieved passages.
+- **Invoice analysis:** normalize fields from CSV/XLSX invoices and extract conservative fields from PDF/image invoices.
+- **API and UI:** FastAPI backend with a Streamlit interface.
 
-**Hosted demo:** https://queryguard-ai.streamlit.app/  
-The hosted site follows the version deployed from the GitHub repository; after replacing `main` with this final V2 code, wait for Streamlit/Render to redeploy before treating the live site as the V2 build.
+## SQL safety pipeline
 
-## What can it analyze?
+Database questions follow this path:
 
-| Mode | Input | Internal approach | Main output |
-|---|---|---|---|
-| Demo | Built-in Chinook SQLite | Governed Text-to-SQL | SQL + verified DB result |
-| Database | `.db`, `.sqlite`, `.sqlite3` | Dynamic schema + Text-to-SQL | SQL + result + export |
-| Spreadsheet | `.xlsx`, `.csv` | Convert to SQLite + Text-to-SQL | SQL + result + export |
-| Documents | `.pdf`, `.docx`, `.pptx` | Parse → chunk → retrieve → grounded LLM answer | Answer + evidence |
-| Invoices | PDF/image/XLSX/CSV | Extract fields → SQLite analytics + optional document retrieval | Invoice table + insights |
+1. Inspect the SQLite schema.
+2. Rank relevant tables with a lexical retriever.
+3. Ask the configured model for one SQLite query.
+4. Parse and validate SQL with SQLGlot.
+5. Reject non-read-only operations, multiple statements, and tables outside the discovered schema.
+6. Execute through a SQLite `mode=ro` connection with `PRAGMA query_only = ON`.
+7. Apply a query timeout and result-row limit.
+8. Optionally attempt one repair when generation or execution fails for a non-security reason.
 
-## Why this is not a simple chatbot
+The validator is a guardrail, not a database permission system. Uploaded data should still be treated as untrusted, and public deployments should not be used for sensitive files.
 
-The LLM is not allowed to execute arbitrary SQL. A database question follows this pipeline:
+## Project structure
 
-```mermaid
-flowchart LR
-    Q[Question] --> R[Retrieve Relevant Schema]
-    R --> L[LLM Generates SQL]
-    L --> V[SQLGlot AST Validation]
-    V -->|Blocked| B[Safe Error]
-    V -->|Approved| D[(Read-only SQLite)]
-    D --> O[Verified Result]
-    O --> E[Explanation / Chart / Download]
+```text
+queryguard-ai/
+├── app/                    # Streamlit client
+├── data/                   # Generated demo database (runtime workspaces are ignored)
+├── docs/                   # Architecture and evaluation notes
+├── examples/               # Small CSV examples
+├── results/                # Reproducible retrieval evaluation output
+├── scripts/                # Demo setup, verification and evaluation
+├── src/queryguard/         # Core package and FastAPI application
+├── tests/                  # Unit and integration tests
+├── Dockerfile              # API container used by Render
+├── pyproject.toml
+├── render.yaml
+└── README.md
 ```
 
-Document questions use a different pipeline because unstructured documents should not be forced into SQL:
+## Installation
 
-```mermaid
-flowchart LR
-    F[PDF / DOCX / PPTX] --> X[Extract Text + Source Location]
-    X --> C[Chunk]
-    C --> R[Retrieve Evidence]
-    R --> L[LLM]
-    L --> A[Answer]
-    R --> S[Page / Section / Slide Evidence]
-```
+Python 3.11 or newer is required. Python 3.12 is used by the included CI workflow.
 
-Invoice mode is hybrid: normalized invoice fields become SQLite for analytics, while invoice text remains available for evidence-oriented questions.
-
-## Key capabilities
-
-- Dynamic SQLite database upload and switching.
-- Excel/CSV conversion into temporary SQLite tables.
-- Schema extraction: tables, columns, primary keys, foreign keys.
-- Explainable BM25-style schema retrieval baseline.
-- Optional Sentence Transformer semantic retrieval.
-- AST-based SQL governance with SQLGlot.
-- Independent SQLite read-only execution boundary.
-- Row limits and query timeout.
-- One bounded SQL repair attempt.
-- PDF/DOCX/PPTX parsing with page/section/slide provenance.
-- Optional OCR for scanned PDFs/images through Tesseract.
-- Evidence-grounded document Q&A.
-- Conservative invoice field extraction with manual-review flags.
-- CSV/XLSX/SQL/document-report downloads.
-- Demo, Ollama, Gemini, and Groq provider modes.
-- FastAPI backend + Streamlit recruiter UI.
-- Docker, GitHub Actions, Render/Streamlit deployment files.
-- Unit, integration, API, ingestion, retrieval, and security tests.
-
-## Included synthetic demo files
-
-The [`examples/`](examples/) folder contains small, non-sensitive files for trying the upload modes immediately:
-
-- `sample_sales.csv` — spreadsheet analytics;
-- `sample_policy.pdf` and `sample_handbook.docx` — cited document Q&A;
-- `sample_briefing.pptx` — slide-aware document Q&A;
-- `sample_invoices.csv` — normalized invoice analytics.
-
-They are demo inputs only, not hidden evaluation data.
-
-## LLM choices
-
-QueryGuard supports one provider at a time:
-
-| Provider | Intended use | API key? |
-|---|---|---|
-| `demo` | CI, smoke tests, Chinook example workflow | No |
-| `ollama` | Local/offline inference | No cloud key |
-| `gemini` | Recommended hosted demo | Yes |
-| `groq` | Optional hosted alternative | Yes |
-
-The provider is configured in `.env` or deployment environment variables. API keys are never supposed to be committed to Git.
-
-## Quick local start
-
-### 1. Clone and create a virtual environment
-
-```powershell
-git clone https://github.com/Vaibhav-153/queryguard-ai.git
-cd queryguard-ai
+```bash
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
+```
+
+Activate the environment, then install the application and development tools:
+
+```bash
 pip install -e ".[ui,dev]"
 ```
 
-macOS/Linux activation:
+For OCR support on image invoices or scanned PDF pages, install the optional Python dependency and Tesseract on the operating system:
 
 ```bash
-source .venv/bin/activate
+pip install -e ".[ocr]"
 ```
 
-### 2. Configure
+## Run locally
 
-Windows PowerShell:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-macOS/Linux:
+Create the synthetic demo database:
 
 ```bash
-cp .env.example .env
+python scripts/setup_demo_db.py
 ```
 
-The default `.env.example` uses:
-
-```text
-QUERYGUARD_LLM_PROVIDER=demo
-```
-
-### 3. Rebuild/verify Chinook
+Start the API:
 
 ```bash
-python scripts/setup_chinook.py
-queryguard-verify
+uvicorn queryguard.api:app --reload
 ```
 
-### 4. Run the API
+In another terminal, point the Streamlit client at the API and run it:
 
 ```bash
-uvicorn queryguard.api.main:app --reload
-```
-
-Open:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-### 5. Run the UI in another terminal
-
-```bash
+export QUERYGUARD_API_URL=http://127.0.0.1:8000
 streamlit run app/streamlit_app.py
 ```
 
-Open:
+On Windows PowerShell, use:
 
-```text
-http://localhost:8501
+```powershell
+$env:QUERYGUARD_API_URL="http://127.0.0.1:8000"
+streamlit run app/streamlit_app.py
 ```
 
-## Local AI with Ollama
+The API exposes interactive OpenAPI documentation at `/docs` while it is running.
 
-Install Ollama separately, then pull a model:
+## Model providers
+
+`QUERYGUARD_LLM_PROVIDER` can be set to:
+
+- `demo` — deterministic local behavior for the bundled examples and basic previews.
+- `gemini` — Google Gemini API.
+- `groq` — Groq-compatible chat completion API.
+- `ollama` — local Ollama server.
+
+Copy `.env.example` to `.env` and set only the provider variables you need. Do not commit API keys.
+
+The demo provider is intentionally limited. Use a configured model provider for free-form questions over arbitrary uploaded schemas.
+
+## API examples
+
+Health check:
 
 ```bash
-ollama pull qwen2.5-coder:7b
+curl http://127.0.0.1:8000/health
 ```
 
-Update `.env`:
+Demo question:
 
-```text
-QUERYGUARD_LLM_PROVIDER=ollama
-QUERYGUARD_OLLAMA_MODEL=qwen2.5-coder:7b
+```bash
+curl -X POST http://127.0.0.1:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{"question":"Show the top 5 customers by revenue"}'
 ```
 
-Restart FastAPI. QueryGuard now sends prompts to your local Ollama server instead of a hosted API.
+If `QUERYGUARD_API_ACCESS_KEY` is configured, protected endpoints require the `X-QueryGuard-Key` header.
 
-See [`docs/LLM_GUIDE.md`](docs/LLM_GUIDE.md) for Gemini, Groq, model changes, privacy, and troubleshooting.
-
-## Tests and verification
+## Tests
 
 ```bash
 ruff check app src tests scripts
 python -m compileall -q src app tests scripts
-python scripts/setup_chinook.py
+pytest
 queryguard-verify
-pytest -v
 ```
 
-Independent evaluation commands:
+The tests cover SQL validation, read-only database access, schema retrieval, uploads, document evidence retrieval, invoice normalization, workspaces, exports, the API, and the deterministic demo flow.
 
-```bash
-python scripts/evaluate_retrieval.py
-python scripts/evaluate_document_retrieval.py
-python scripts/evaluate_invoice_extraction.py
-```
+## Retrieval evaluation
 
-### Verified measurements included in this repository
+`python scripts/evaluate_retrieval.py` evaluates table retrieval on five synthetic demo questions and writes `results/retrieval_metrics.json`.
 
-These are deliberately separated from untested LLM claims:
+The current reproducible results are:
 
-| Measurement | Status | Result |
-|---|---|---|
-| Chinook schema retrieval | Measured | Recall@1 `0.800`, Recall@3 `0.967`, Recall@5 `0.967` |
-| Synthetic document lexical retrieval | Measured | Hit@1 `0.875`, Hit@3 `0.875` |
-| Synthetic invoice text field extraction | Measured | Field exact match `1.000` on 3 simple hand-authored examples |
-| Gemini Text-to-SQL execution accuracy | Not measured in artifact build | Run after adding a real key |
-| Ollama Text-to-SQL execution accuracy | Not measured in artifact build | Run on target hardware |
-| OCR accuracy | Not measured | Depends on scans/Tesseract |
+| Metric | Result |
+| --- | ---: |
+| Mean Recall@1 | 0.800 |
+| Mean Recall@3 | 1.000 |
+| Mean Recall@5 | 1.000 |
 
-The synthetic document/invoice sets are intentionally small. They verify implementation behavior; they are **not production benchmarks**.
-
-### Final artifact verification snapshot
-
-The packaged V2 build was checked in the available artifact runtime with **43 tests passing and 13 SQLGlot-dependent tests skipped** because SQLGlot was not available in that runtime. Python compilation, Chinook rebuild/verification, API health, sample-file ingestion, export tests, configuration parsing, and package-wheel build passed. Artifact-runtime coverage measured **68%**.
-
-This is deliberately not presented as a fully green release gate: run the normal GitHub/Codespaces workflow after installing all dependencies and require the SQLGlot-dependent tests to run without dependency skips. See [`reports/BUILD_VERIFICATION.md`](reports/BUILD_VERIFICATION.md) for the exact tested/not-tested boundary.
-
-## Repository map
-
-```text
-queryguard-ai/
-├── app/                         # Streamlit UI + frontend API client
-├── src/queryguard/
-│   ├── api/                     # FastAPI routes
-│   ├── database/                # SQLite schema + read-only execution
-│   ├── governance/              # SQLGlot policy
-│   ├── retrieval/               # Schema retrieval
-│   ├── llm/                     # Ollama/Gemini/Groq/demo providers
-│   ├── services/                # SQL and document orchestration
-│   ├── workspaces/              # Temporary upload isolation
-│   ├── ingestion/               # SQLite/Excel/CSV/PDF/DOCX/PPTX/OCR loaders
-│   ├── documents/               # Chunking + document retrieval
-│   ├── invoices/                # Invoice extraction + normalized DB
-│   ├── export/                  # CSV/XLSX/DOCX report exporters
-│   └── evaluation/              # Metrics + Text-to-SQL evaluator
-├── tests/                       # Unit/integration/API/security tests
-├── scripts/                     # Setup, evaluation, verification helpers
-├── examples/                    # Small synthetic upload-demo files
-├── data/                        # Demo/evaluation data only
-├── docs/                        # Full theory + implementation guide
-├── results/                     # Measured result artifacts
-├── reports/                     # Build verification
-├── Dockerfile
-├── docker-compose.yml
-├── render.yaml
-└── .github/workflows/tests.yml
-```
-
-For a file-by-file walkthrough, read [`docs/CODEBASE_GUIDE.md`](docs/CODEBASE_GUIDE.md).
-
-## Security model
-
-Important controls:
-
-- uploaded filenames are reduced to safe basenames;
-- upload type/size allowlists;
-- Office ZIP expansion limits;
-- temporary random workspace IDs;
-- uploaded SQLite integrity check;
-- SQL AST validation;
-- table allowlist derived from active schema;
-- SQLite `mode=ro` and `PRAGMA query_only=ON`;
-- result row limit;
-- execution timeout;
-- no arbitrary user filesystem paths;
-- optional shared UI/API secret;
-- secrets loaded from environment variables;
-- user workspaces are Git-ignored and expire.
-
-See [`docs/SECURITY.md`](docs/SECURITY.md) for threats and limitations.
-
-## Dataset strategy
-
-Chinook remains the reproducible default demo. User-uploaded data is temporary and does not modify the demo database.
-
-If you want to permanently replace or add a dataset, follow [`docs/ADDING_DATASETS.md`](docs/ADDING_DATASETS.md). That guide explains SQLite, Excel/CSV, documents, evaluation-set creation, schema verification, and leakage prevention.
-
-## Documentation index
-
-- [`docs/PROJECT_REPORT.md`](docs/PROJECT_REPORT.md) — complete project narrative.
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — components and data flows.
-- [`docs/CODEBASE_GUIDE.md`](docs/CODEBASE_GUIDE.md) — how files call each other.
-- [`docs/BUILD_FROM_SCRATCH.md`](docs/BUILD_FROM_SCRATCH.md) — chronological build/learning guide.
-- [`docs/UI_GUIDE.md`](docs/UI_GUIDE.md) — what each screen and action does.
-- [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md) — API endpoints and contracts.
-- [`docs/FEATURES.md`](docs/FEATURES.md) — problem → implementation → evaluation → trade-off.
-- [`docs/THEORY_GUIDE.md`](docs/THEORY_GUIDE.md) — SQL, RAG, LLM, backend, security theory.
-- [`docs/DATA_GUIDE.md`](docs/DATA_GUIDE.md) — data provenance and quality.
-- [`docs/ADDING_DATASETS.md`](docs/ADDING_DATASETS.md) — changing/adding datasets.
-- [`docs/DOCUMENT_PIPELINE.md`](docs/DOCUMENT_PIPELINE.md) — PDF/DOCX/PPTX RAG.
-- [`docs/INVOICE_PIPELINE.md`](docs/INVOICE_PIPELINE.md) — invoice extraction and hybrid analytics.
-- [`docs/LLM_GUIDE.md`](docs/LLM_GUIDE.md) — Demo/Ollama/Gemini/Groq.
-- [`docs/LOCAL_SETUP.md`](docs/LOCAL_SETUP.md) — detailed local setup.
-- [`docs/CLOUD_DEPLOYMENT.md`](docs/CLOUD_DEPLOYMENT.md) — Render + Streamlit Cloud.
-- [`docs/TESTING.md`](docs/TESTING.md) — what each test protects.
-- [`docs/EVALUATION.md`](docs/EVALUATION.md) — metrics and honest reporting.
-- [`docs/SECURITY.md`](docs/SECURITY.md) — threat model.
-- [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) — common failures.
-- [`docs/INTERVIEW_GUIDE.md`](docs/INTERVIEW_GUIDE.md) — technical/design/debugging Q&A.
-- [`docs/DSA_AND_CS_CONCEPTS.md`](docs/DSA_AND_CS_CONCEPTS.md) — natural CS concepts.
-- [`docs/HIRING_PACKAGE.md`](docs/HIRING_PACKAGE.md) — resume/LinkedIn/demo material.
-- [`docs/FINAL_REVIEW.md`](docs/FINAL_REVIEW.md) — final scored readiness review and acceptance gaps.
+This is a five-question synthetic check for the bundled schema, not a benchmark of Text-to-SQL quality on external datasets. See [docs/EVALUATION.md](docs/EVALUATION.md).
 
 ## Limitations
 
-- Generated SQL can be syntactically safe but semantically wrong.
-- Spreadsheet relationship inference is not automatic; uploaded sheets normally have no declared foreign keys.
-- Document answers depend on retrieval and the selected LLM.
-- Invoice PDF extraction is heuristic and deliberately flags uncertainty.
-- OCR requires Tesseract and has not been benchmarked here.
-- Temporary workspaces are designed for a personal/demo app, not durable multi-tenant storage.
-- Public hosted demos should not receive confidential data.
-- No enterprise authentication, row-level permissions, audit SIEM integration, or SLA is claimed.
+- SQL generation quality depends on the configured model and the database schema.
+- The lexical schema retriever is small and explainable, but it is not semantic retrieval.
+- Document retrieval is lexical and does not use embeddings.
+- OCR depends on a local Tesseract installation and may require manual review.
+- Invoice extraction is conservative and does not replace accounting verification.
+- Only SQLite is supported for query execution.
+- Workspaces are filesystem-backed and designed for a single service instance, not multi-node storage.
 
-## Production evolution
+## Deployment
 
-A real enterprise version could add authenticated user storage, PostgreSQL adapters, row/column permissions, durable object storage, encrypted workspace metadata, background ingestion, richer evaluation, monitoring, and human-review workflows. These are documented as future work rather than added only for resume keywords.
+`render.yaml` and `Dockerfile` configure the FastAPI service. The Streamlit UI can be deployed separately by setting `QUERYGUARD_API_URL` to the API address.
+
+For a public deployment, set an API access key, use non-sensitive test files, and review upload limits before exposing the service.
 
 ## License
 
-QueryGuard AI code is MIT licensed. Third-party datasets such as Chinook and Spider retain their own licenses and attribution requirements. See `data/README.md`.
+MIT License. See [LICENSE](LICENSE).
