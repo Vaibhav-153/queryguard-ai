@@ -27,7 +27,7 @@ def dataframe_to_xlsx_bytes(frame: pd.DataFrame) -> bytes:
 
 
 def document_answer_markdown(response: DocumentQueryResponse) -> str:
-    lines = [f"# Document answer\n", f"**Question:** {response.question}\n", response.answer or ""]
+    lines = ["# Document answer\n", f"**Question:** {response.question}\n", response.answer or ""]
     if response.sources:
         lines.append("\n## Sources")
         for source in response.sources:

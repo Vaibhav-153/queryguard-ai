@@ -9,7 +9,6 @@ from queryguard.database import extract_schema
 from queryguard.demo import create_demo_database
 from queryguard.retrieval import LexicalSchemaRetriever
 
-
 CASES = [
     ("Show the top customers by revenue", {"Customer", "Invoice"}),
     ("Which countries generated the most revenue?", {"Customer", "Invoice"}),
@@ -49,7 +48,6 @@ def main() -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(json.dumps(summary, indent=2))
-
 
 if __name__ == "__main__":
     main()

@@ -2,7 +2,11 @@ from pathlib import Path
 
 import pandas as pd
 
-from queryguard.invoices import parse_invoice_file, parse_structured_invoices, write_invoice_database
+from queryguard.invoices import (
+    parse_invoice_file,
+    parse_structured_invoices,
+    write_invoice_database,
+)
 
 
 def test_structured_invoice_csv_is_parsed(tmp_path: Path):

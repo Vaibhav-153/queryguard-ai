@@ -6,7 +6,13 @@ import time
 from pathlib import Path
 
 from queryguard.config import Settings
-from queryguard.database import DatabaseError, TableSchema, allowed_table_names, execute_read_only, extract_schema
+from queryguard.database import (
+    DatabaseError,
+    TableSchema,
+    allowed_table_names,
+    execute_read_only,
+    extract_schema,
+)
 from queryguard.llm import build_text_llm, generate_sql, repair_sql
 from queryguard.models import QueryResponse, RetrievedTable, ValidationInfo
 from queryguard.retrieval import LexicalSchemaRetriever, RetrievalResult

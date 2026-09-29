@@ -57,7 +57,7 @@ def show_status() -> dict | None:
             st.success("Backend connected")
             st.write(f"**Provider:** {health.get('llm_provider', 'unknown')}")
             st.write(f"**Model:** {health.get('llm_model', 'unknown')}")
-            st.write(f"**SQL validation:** SQLGlot + read-only SQLite")
+            st.write("**SQL validation:** SQLGlot + read-only SQLite")
             st.caption(
                 f"Upload limit: {health.get('max_upload_mb', '?')} MB/file · "
                 f"{health.get('max_upload_files', '?')} files"

@@ -1,6 +1,5 @@
 from queryguard.sql_guard import validate_sql
 
-
 ALLOWED = {"customer", "invoice", "track"}
 
 
