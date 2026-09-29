@@ -7,7 +7,7 @@ import os
 import pandas as pd
 import streamlit as st
 
-from app.api_client import APIClientError, QueryGuardAPI
+from api_client import APIClientError, QueryGuardAPI
 from queryguard.exports import (
     dataframe_to_csv_bytes,
     dataframe_to_xlsx_bytes,
